@@ -1,0 +1,53 @@
+use axum::extract::{Path, State};
+use axum::http::StatusCode;
+use axum::Json;
+
+use crate::db::photo::Photos;
+use crate::db::resources::model_bus_photo_details::ModelBusPhotoDetailsUpdate;
+use crate::http::errors::ApiError;
+use crate::http::HttpState;
+
+#[utoipa::path(
+    patch,
+    path = "/photos/{id}/model-bus-details",
+    tag = "Photos",
+    summary = "Update the model bus details for a photo",
+    request_body = ModelBusPhotoDetailsUpdate,
+    responses(
+        (
+            status = 204,
+            description = "Success"
+        ),
+        (
+            status = 500,
+            description = "Internal server error"
+        )
+    ),
+    security(
+        ("bearer_auth" = [])
+    )
+)]
+pub async fn update_details(
+    State(state): State<HttpState>,
+    Path(id): Path<i64>,
+    Json(update): Json<ModelBusPhotoDetailsUpdate>,
+) -> Result<StatusCode, ApiError> {
+    // TODO: Require auth and check if user owns it
+    let photo = state
+        .db
+        .photos
+        .get(id)
+        .map_err(|err| ApiError::GenericServerError(err.to_string()))?
+        .ok_or_else(|| ApiError::NotFound("Photo not found".to_string()))?;
+
+    let model_bus_details = Photos::get_model_bus_details(state.db.clone(), photo)
+        .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
+
+    state
+        .db
+        .model_bus_photo_details
+        .update(model_bus_details.id, &update)
+        .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
+
+    Ok(StatusCode::NO_CONTENT)
+}

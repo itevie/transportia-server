@@ -66,7 +66,7 @@ const LISTING_COLUMNS: &str = r#"
     some_sold_out
 "#;
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct BusListingQuery {
     pub scale: Option<String>,
     pub origin: Option<String>,
@@ -77,8 +77,11 @@ pub struct BusListingQuery {
     pub price_high: Option<String>,
     pub condition: Option<String>,
     pub category: Option<String>,
+
     pub search: Option<String>,
-    pub sort: Option<String>
+    pub sort: Option<String>,
+    pub page_length: Option<i64>,
+    pub offset: Option<i64>,
 }
 
 #[derive(Serialize)]
@@ -125,6 +128,11 @@ impl BusListings {
             rusqlite::Error::ToSqlConversionFailure(Box::new(err))
         })?;
 
+        let page_length = match query.page_length {
+            Some(x) => if x > 1000 { 1000 } else { x },
+            None => 50,
+        };
+
         let mut sql = format!(
             "SELECT {} FROM bus_listings WHERE 1 = 1",
             LISTING_COLUMNS
@@ -138,7 +146,7 @@ impl BusListings {
         }
 
         if let Some(value) = &query.origin {
-            sql.push_str(" AND origin LIKE '%' || ? || '%'");
+            sql.push_str(" AND origin_code LIKE '%' || ? || '%'");
             params.push(Box::new(value.clone()));
         }
 
@@ -185,19 +193,21 @@ impl BusListings {
             sql.push_str(
                 r#"
         AND (
-            title LIKE '%' || ? || '%' OR
-            description LIKE '%' || ? || '%' OR
-            manufacturer LIKE '%' || ? || '%' OR
-            manufacturer_code LIKE '%' || ? || '%' OR
-            scale LIKE '%' || ? || '%' OR
-            origin LIKE '%' || ? || '%' OR
-            origin_code LIKE '%' || ? || '%' OR
-            condition LIKE '%' || ? || '%' OR
-            category LIKE '%' || ? || '%' OR
-            seller_name LIKE '%' || ? || '%'
+            REPLACE(LOWER(title), ' ', '') LIKE '%' || ? || '%' OR
+            REPLACE(LOWER(description), ' ', '') LIKE '%' || ? || '%' OR
+            REPLACE(LOWER(manufacturer), ' ', '') LIKE '%' || ? || '%' OR
+            REPLACE(LOWER(manufacturer_code), ' ', '') LIKE '%' || ? || '%' OR
+            REPLACE(LOWER(scale), ' ', '') LIKE '%' || ? || '%' OR
+            REPLACE(LOWER(origin), ' ', '') LIKE '%' || ? || '%' OR
+            REPLACE(LOWER(origin_code), ' ', '') LIKE '%' || ? || '%' OR
+            REPLACE(LOWER(condition), ' ', '') LIKE '%' || ? || '%' OR
+            REPLACE(LOWER(category), ' ', '') LIKE '%' || ? || '%' OR
+            REPLACE(LOWER(seller_name), ' ', '') LIKE '%' || ? || '%'
         )
         "#,
             );
+
+            let value = value.to_lowercase().replace(' ', "");
 
             for _ in 0..10 {
                 params.push(Box::new(value.clone()));
@@ -214,6 +224,14 @@ impl BusListings {
                 }
                 _ => {}
             }
+        }
+        
+        sql.push_str(" LIMIT ?");
+        params.push(Box::new(page_length));
+
+        if let Some(offset) = query.offset {
+            sql.push_str(" OFFSET ?");
+            params.push(Box::new(offset));
         }
 
         let mut statement = connection.prepare(&sql)?;

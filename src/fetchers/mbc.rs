@@ -3,6 +3,7 @@ use reqwest::{Client, Url};
 use serde::Deserialize;
 use tokio::time::sleep;
 use crate::db::resources::bus_listing::BusListingResource;
+use crate::fetchers::model_manufacturers::{get_manufacturer_code, KNOWN_MANUFACTURERS};
 
 pub async fn fetch() -> Result<Vec<BusListingResource>, Box<dyn std::error::Error>> {
     let client = Client::new();
@@ -17,7 +18,7 @@ pub async fn fetch() -> Result<Vec<BusListingResource>, Box<dyn std::error::Erro
             sleep(Duration::from_secs(1)).await;
         }
 
-        let url = make_mbc_url(page, per_page, category.clone());
+        let url = make_mbc_url(page, per_page);
 
         let http_response = client
             .get(&url)
@@ -33,7 +34,7 @@ pub async fn fetch() -> Result<Vec<BusListingResource>, Box<dyn std::error::Erro
         }
 
         match serde_json::from_str::<ProductsResponse>(&text) {
-            Ok(response) => {
+            Ok(_) => {
                 println!("Parsed successfully");
             }
             Err(e) => {
@@ -61,23 +62,42 @@ pub async fn fetch() -> Result<Vec<BusListingResource>, Box<dyn std::error::Erro
     Ok(listings)
 }
 
-fn convert_product(
-    part: Product,
-    url: &str,
-) -> BusListingResource {
-    let title_parts = part.name.split(" / ").collect::<Vec<&str>>();
+pub struct ListingDetails {
+    pub manufacturer: String,
+    pub manufacturer_id: String,
+    pub scale: Option<String>
+}
 
-    let manufacturer_id = title_parts[0];
+pub fn get_details(title: String) -> ListingDetails {
+    let title_parts = title.split(" / ").collect::<Vec<&str>>();
 
-    let manufacturer = manufacturer_id
-        .rsplit_once(' ')
-        .map(|(before, _)| before)
-        .unwrap_or(manufacturer_id);
+    let manufacturer = KNOWN_MANUFACTURERS
+        .iter()
+        .filter(|manufacturer| title.contains(**manufacturer))
+        .max_by_key(|manufacturer| manufacturer.len())
+        .copied()
+        .unwrap_or_default();
+
+    let manufacturer_id = get_manufacturer_code(&title.clone(), manufacturer);
 
     let scale = title_parts
         .iter()
         .find(|part| part.ends_with("Scale"))
         .map(|part| part.to_string());
+    
+    ListingDetails {
+        manufacturer: manufacturer.to_string(),
+        manufacturer_id,
+        scale,
+    }
+}
+
+fn convert_product(
+    part: Product,
+    url: &str,
+) -> BusListingResource {
+    let details = get_details(part.name.clone());
+    let title_parts = part.name.split(" / ").collect::<Vec<&str>>();
 
     BusListingResource {
         id: 0,
@@ -88,9 +108,9 @@ fn convert_product(
         title: part.name.clone(),
         description: part.short_description,
         link: Some(part.absolute_site_link),
-        scale,
-        manufacturer: Some(manufacturer.to_string()),
-        manufacturer_code: Some(manufacturer_id.to_string()),
+        scale: details.scale,
+        manufacturer: Some(details.manufacturer.to_string()),
+        manufacturer_code: Some(details.manufacturer_id.to_string()),
         price_low: part.price.low,
         price_high: part.price.high,
         currency: Some("£".to_string()),
@@ -102,7 +122,7 @@ fn convert_product(
             .unwrap_or_default(),
         seller_name: None,
         seller_link: None,
-        condition: if manufacturer_id.contains("PRE-OWNED") {
+        condition: if part.name.contains("PRE-OWNED") {
             Some("PRE-OWNED".to_string())
         } else {
             None
@@ -118,7 +138,7 @@ fn convert_product(
     }
 }
 
-fn make_mbc_url(page: u32, per_page: u32, category: String) -> String {
+fn make_mbc_url(page: u32, per_page: u32) -> String {
     let mut url = Url::parse(
         "https://cdn5.editmysite.com/app/store/api/v28/editor/users/142086096/sites/674346216273917466/products"
     ).unwrap();
@@ -236,7 +256,7 @@ struct Image {
 #[derive(Debug, Deserialize)]
 struct ImageUrls {
     #[serde(rename = "80")]
-    size_80: String,
+    _size_80: String,
 
     #[serde(rename = "160")]
     size_160: String,
@@ -253,3 +273,4 @@ struct ImageUrls {
     #[serde(rename = "2560")]
     size_2560: String,
 }
+

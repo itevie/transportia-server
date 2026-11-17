@@ -3,6 +3,7 @@ use chrono::Utc;
 use r2d2::Pool;
 use r2d2_sqlite::{rusqlite, SqliteConnectionManager};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use crate::db::bus_photo_details::BusPhotoDetailsManager;
 use crate::db::Database;
 use crate::db::model_bus_photo_details::ModelBusPhotoDetailsManager;
@@ -27,6 +28,16 @@ CREATE TABLE IF NOT EXISTS photos (
     created_at TEXT NOT NULL
 );
 "#;
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, ToSchema, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum PhotoOrderBy {
+    #[default]
+    Newest,
+    Oldest,
+    HighestRated,
+    LowestRated,
+}
 
 #[derive(Serialize, Deserialize, utoipa::IntoParams)]
 pub struct PhotoQuery {
@@ -75,6 +86,7 @@ pub struct PhotoQuery {
     // Pagination
     pub page_length: Option<i64>,
     pub offset: Option<i64>,
+    pub order_by: Option<PhotoOrderBy>
 }
 
 

@@ -1,4 +1,4 @@
-use crate::db::photo::{PhotoQuery, Photos};
+use crate::db::photo::{PhotoOrderBy, PhotoQuery, Photos};
 use crate::db::resources::photo::{Photo, PhotoType};
 
 pub fn query_only_photo_search(query: String) -> PhotoQuery {
@@ -40,6 +40,7 @@ pub fn query_only_photo_search(query: String) -> PhotoQuery {
         mbd_owner_id: None,
         page_length: None,
         offset: None,
+        order_by: None,
     }
 }
 
@@ -149,7 +150,43 @@ impl Photos {
             None => 50,
         };
 
-        sql.push_str(" ORDER BY p.created_at DESC");
+        let order_by = query.order_by.unwrap_or_default();
+
+        match order_by {
+            PhotoOrderBy::Newest => {
+                sql.push_str(" ORDER BY p.created_at DESC");
+            }
+            PhotoOrderBy::Oldest => {
+                sql.push_str(" ORDER BY p.created_at ASC");
+            }
+            PhotoOrderBy::HighestRated => {
+                sql.push_str(
+                    r#"
+                    ORDER BY
+                        (SELECT AVG(r.rating)
+                         FROM photo_ratings r
+                         WHERE r.photo_id = p.id) DESC NULLS LAST,
+                        (SELECT COUNT(*)
+                         FROM photo_ratings r
+                         WHERE r.photo_id = p.id) DESC
+                    "#
+                );
+            }
+            PhotoOrderBy::LowestRated => {
+                sql.push_str(
+                    r#"
+                    ORDER BY
+                        (SELECT AVG(r.rating)
+                         FROM photo_ratings r
+                         WHERE r.photo_id = p.id) ASC NULLS LAST,
+                        (SELECT COUNT(*)
+                         FROM photo_ratings r
+                         WHERE r.photo_id = p.id) DESC
+                    "#
+                );
+            }
+        }
+        
         sql.push_str(" LIMIT ?");
         params.push(Box::new(page_length));
 

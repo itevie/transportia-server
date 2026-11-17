@@ -5,6 +5,7 @@ pub mod util;
 mod extractors;
 mod bods;
 mod auth;
+mod db_postgres;
 
 use std::sync::Arc;
 use axum::extract::DefaultBodyLimit;

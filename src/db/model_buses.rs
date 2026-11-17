@@ -531,6 +531,7 @@ impl ModelBuses {
                     mbd_owner_id: None,
                     page_length: None,
                     offset: None,
+                    order_by: None,
                 })?.first().cloned();
                 
                 Ok(ModelBusFilledOut {

@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:18
+    container_name: transportia-postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: transportia
+      POSTGRES_PASSWORD: transportia
+      POSTGRES_DB: transportia
+
+    ports:
+      - "5433:5433"
+
+    volumes:
+      - ./postgres/data:/var/lib/postgresql

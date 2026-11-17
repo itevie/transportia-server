@@ -373,6 +373,7 @@ impl ModelBusOwnerships {
                     mbd_owner_id: user_id,
                     page_length: None,
                     offset: None,
+                    order_by: None,
                 })?.first().cloned();
 
                 Ok(ModelBusOwnershipFilledOut {

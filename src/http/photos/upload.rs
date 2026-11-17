@@ -10,6 +10,7 @@ use crate::db::resources::photo::{PhotoFilledOut, Photo, PhotoType, PhotoDetails
 use crate::extractors::authenticator::AuthUser;
 use crate::http::errors::ApiError;
 use crate::http::HttpState;
+use crate::util::image::compress_image;
 
 #[derive(Debug, Deserialize, ToSchema, IntoParams)]
 pub struct UploadDetails {
@@ -62,13 +63,19 @@ pub async fn upload_image(
         let file_name = field.file_name().unwrap_or("").to_string();
         let content_type = field.content_type().unwrap_or("").to_string();
 
-        if content_type != "image/jpeg" && content_type != "image/png" {
+        if content_type != "image/jpeg"
+            && content_type != "image/png"
+            && content_type != "image/webp"
+        {
             return Err(ApiError::UploadedNonImage);
         }
 
         let data = field
             .bytes()
             .await
+            .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
+
+        let data = compress_image(&data)
             .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 
         tokio::fs::write(
@@ -90,7 +97,7 @@ pub async fn upload_image(
             .bucket(std::env::var("R2_BUCKET").unwrap())
             .key(&key)
             .body(ByteStream::from(data))
-            .content_type(&content_type)
+            .content_type("image/webp")
             .send()
             .await
             .map_err(|err| {

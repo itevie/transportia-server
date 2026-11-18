@@ -9,10 +9,8 @@ use std::sync::Arc;
 use crate::db::resource::bustimes::livery::{BtLiveries, SQL_BT_LIVERY};
 use crate::db::resource::bustimes::vehicle::{BtVehicles, SQL_BT_VEHICLE};
 use crate::db::resource::bustimes::vehicle_type::{BtVehicleTypes, SQL_BT_VEHICLE_TYPE};
-use crate::db::resource::checklist::checklist::{RouteChecklists, SQL_ROUTE_CHECKLISTS};
-use crate::db::resource::checklist::checklist_item::{
-    RouteChecklistItems, SQL_ROUTE_CHECKLIST_ITEMS,
-};
+use crate::db::resource::checklist::checklist::{Checklists, SQL_CHECKLISTS};
+use crate::db::resource::checklist::checklist_item::{ChecklistItems, SQL_CHECKLIST_ITEMS};
 use crate::db::resource::comment::comment::{Comments, SQL_COMMENT};
 use crate::db::resource::comment::comment_thread::{CommentThreads, SQL_COMMENT_THREAD};
 use crate::db::resource::favourite::favourite::{Favourites, SQL_FAVOURITE};
@@ -62,8 +60,8 @@ pub struct Database {
     pub tx_lines: TxLines,
     pub photos: Photos,
     pub bus_photo_details: BusPhotoDetailsManager,
-    pub route_checklists: RouteChecklists,
-    pub route_checklist_items: RouteChecklistItems,
+    pub checklists: Checklists,
+    pub checklist_items: ChecklistItems,
     pub favourites: Favourites,
     pub photo_ratings: PhotoRatings,
     pub comment_threads: CommentThreads,
@@ -114,8 +112,8 @@ pub async fn init_db() -> Result<Database, Box<dyn std::error::Error>> {
     execute_sql!(SQL_PHOTOS);
     execute_sql!(SQL_BUS_PHOTO_DETAILS);
 
-    execute_sql!(SQL_ROUTE_CHECKLISTS);
-    execute_sql!(SQL_ROUTE_CHECKLIST_ITEMS);
+    execute_sql!(SQL_CHECKLISTS);
+    execute_sql!(SQL_CHECKLIST_ITEMS);
 
     execute_sql!(SQL_FAVOURITES_GROUPS);
     execute_sql!(SQL_FAVOURITE);
@@ -148,8 +146,8 @@ pub async fn init_db() -> Result<Database, Box<dyn std::error::Error>> {
         tx_lines: TxLines::new(pool.clone()),
         photos: Photos::new(pool.clone()),
         bus_photo_details: BusPhotoDetailsManager::new(pool.clone()),
-        route_checklists: RouteChecklists::new(pool.clone()),
-        route_checklist_items: RouteChecklistItems::new(pool.clone()),
+        checklists: Checklists::new(pool.clone()),
+        checklist_items: ChecklistItems::new(pool.clone()),
         favourites: Favourites::new(pool.clone()),
         photo_ratings: PhotoRatings::new(pool.clone()),
         comment_threads: CommentThreads::new(pool.clone()),

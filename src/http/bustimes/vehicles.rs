@@ -1,7 +1,7 @@
 use crate::auth::quick::is_trusted_user;
 use crate::db;
 use crate::db::resource::bustimes::vehicle::{BtVehicleQuery, BtVehicles};
-use crate::db::resource::bustimes::vehicle_def::FilledOutBtVehicle;
+use crate::db::resource::bustimes::vehicle_def::BtVehicleFilleOut;
 use crate::extractors::authenticator::AuthUser;
 use crate::extractors::optional_authenticator::OptionalAuthUser;
 use crate::http::HttpState;
@@ -23,7 +23,7 @@ use utoipa::ToSchema;
         (
             status = 200,
             description = "Vehicles matching the search query",
-            body = [FilledOutBtVehicle]
+            body = [BtVehicleFilleOut]
         ),
         (
             status = 500,
@@ -35,7 +35,7 @@ pub async fn search_vehicles(
     State(state): State<HttpState>,
     Query(query): Query<BtVehicleQuery>,
     OptionalAuthUser(user): OptionalAuthUser,
-) -> Result<Json<Vec<FilledOutBtVehicle>>, String> {
+) -> Result<Json<Vec<BtVehicleFilleOut>>, String> {
     let listings = state
         .db
         .vehicles
@@ -62,7 +62,7 @@ pub async fn search_vehicles(
         (
             status = 200,
             description = "Vehicle",
-            body = FilledOutBtVehicle
+            body = BtVehicleFilleOut
         ),
         (
             status = 404,
@@ -78,7 +78,7 @@ pub async fn get_vehicle(
     State(state): State<HttpState>,
     Path(id): Path<i64>,
     OptionalAuthUser(user): OptionalAuthUser,
-) -> Result<Json<FilledOutBtVehicle>, String> {
+) -> Result<Json<BtVehicleFilleOut>, String> {
     let vehicle = state
         .db
         .vehicles

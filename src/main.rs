@@ -5,6 +5,7 @@ mod extractors;
 pub mod fetchers;
 pub mod http;
 pub mod util;
+mod validation;
 
 use crate::bods::datafeed::BodsSiriVmClient;
 use crate::db::create_missing_comment_threads;

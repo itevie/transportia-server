@@ -1,5 +1,5 @@
 use crate::db::resource::bustimes::livery_def::BtLivery;
-use crate::db::resource::bustimes::vehicle_def::FilledOutBtVehicle;
+use crate::db::resource::bustimes::vehicle_def::BtVehicleFilleOut;
 use crate::db::resource::bustimes::vehicle_type_def::BtVehicleType;
 use crate::db::resource::comment::comment_def::CommentFilledOut;
 use crate::db::resource::model_bus::model_bus_def::ModelBusFilledOut;
@@ -107,7 +107,7 @@ pub struct FavouriteFilled {
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(tag = "type")]
 pub enum FavouriteObject {
-    Vehicle(FilledOutBtVehicle),
+    Vehicle(BtVehicleFilleOut),
     VehicleType(BtVehicleType),
     Livery(BtLivery),
     Service(TxLine),

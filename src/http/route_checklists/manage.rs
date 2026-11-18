@@ -1,5 +1,5 @@
 use crate::auth::quick::check_route_checklist;
-use crate::db::resource::checklist::checklist_def::RouteChecklist;
+use crate::db::resource::checklist::checklist_def::{Checklist, ChecklistType};
 use crate::extractors::authenticator::AuthUser;
 use crate::http::HttpState;
 use crate::http::errors::ApiError;
@@ -14,6 +14,7 @@ use utoipa::ToSchema;
 pub struct RouteChecklistCreate {
     pub title: String,
     pub description: Option<String>,
+    pub checklist_type: ChecklistType,
 }
 
 #[utoipa::path(
@@ -27,7 +28,7 @@ pub struct RouteChecklistCreate {
         (
             status = 201,
             description = "Route checklist created successfully",
-            body = RouteChecklist
+            body = Checklist
         ),
         (
             status = 500,
@@ -45,11 +46,13 @@ pub async fn create_route_checklist(
 ) -> Result<Response, ApiError> {
     let checklist = state
         .db
-        .route_checklists
+        .checklists
         .create(
             &data.title,
             data.description.as_deref(),
             user_id,
+            data.checklist_type as i32,
+            false,
             &chrono::Utc::now().to_rfc3339(),
         )
         .await
@@ -102,7 +105,7 @@ pub async fn delete_route_checklist(
 
     state
         .db
-        .route_checklists
+        .checklists
         .delete(id)
         .await
         .map_err(|err| ApiError::Database(err.to_string()))?;

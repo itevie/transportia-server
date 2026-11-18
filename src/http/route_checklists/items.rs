@@ -6,6 +6,10 @@ use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
+use serde::{Deserialize, Serialize};
+use utoipa::{IntoParams, ToSchema};
+use crate::db::resource::checklist::checklist_def::ChecklistType;
+use crate::validation::checklists::check_checklist_obj;
 
 #[utoipa::path(
     post,
@@ -20,9 +24,9 @@ use axum::response::{IntoResponse, Response};
             description = "Route checklist ID"
         ),
         (
-            "line_id" = String,
+            "obj_id" = String,
             Path,
-            description = "TransXChange line ID"
+            description = "Object ID, service or vehicle, based on checklist's type"
         )
     ),
     responses(
@@ -50,27 +54,17 @@ use axum::response::{IntoResponse, Response};
 pub async fn create_route_checklist_item(
     State(state): State<HttpState>,
     AuthUser { user_id }: AuthUser,
-    Path((checklist_id, line_id)): Path<(i64, String)>,
+    Path((checklist_id, obj_id)): Path<(i64, String)>,
 ) -> Result<Response, ApiError> {
-    check_route_checklist(state.db.clone(), checklist_id, user_id).await?;
-
-    let line = state
-        .db
-        .tx_lines
-        .get(line_id.as_str())
-        .await
-        .map_err(|_e| ApiError::NotFound(line_id.to_string()))?;
-
-    if let None = line {
-        return Err(ApiError::NotFound(line_id.to_string()));
-    }
+    let checklist = check_route_checklist(state.db.clone(), checklist_id, user_id).await?;
+    check_checklist_obj(state.db.clone(), checklist, obj_id.clone()).await?;
 
     let added_at = chrono::Utc::now().to_rfc3339();
 
     let _ = state
         .db
-        .route_checklist_items
-        .create(checklist_id, &line_id, &added_at)
+        .checklist_items
+        .create(checklist_id, &obj_id, &added_at)
         .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
@@ -122,24 +116,42 @@ pub async fn create_route_checklist_item_from_operators(
     AuthUser { user_id }: AuthUser,
     Path((checklist_id, operator_id)): Path<(i64, String)>,
 ) -> Result<Response, ApiError> {
-    check_route_checklist(state.db.clone(), checklist_id, user_id).await?;
+    let checklist = check_route_checklist(state.db.clone(), checklist_id, user_id).await?;
 
-    let lines = state
-        .db
-        .tx_lines
-        .get_by_national_operator_code(operator_id.as_str())
-        .await
-        .map_err(|_e| {
-            ApiError::GenericServerError("Failed to fetch lines by operator".to_string())
-        })?;
+    let ids = match checklist.checklist_type {
+        ChecklistType::Service => {
+            state
+                .db
+                .tx_lines
+                .get_by_national_operator_code(operator_id.as_str())
+                .await
+                .map_err(|_e| {
+                    ApiError::GenericServerError("Failed to fetch lines by operator".to_string())
+                })?
+                .iter().map(|x| x.tx_id.clone())
+                .collect::<Vec<_>>()
+        }
+        ChecklistType::Vehicle => {
+            state
+                .db
+                .vehicles
+                .get_by_national_operator_code(operator_id.as_str())
+                .await
+                .map_err(|_e| {
+                    ApiError::GenericServerError("Failed to fetch vehicles for operator".to_string())
+                })?
+                .iter().map(|x| x.id.to_string())
+                .collect::<Vec<_>>()
+        }
+    };
 
     let added_at = chrono::Utc::now().to_rfc3339();
 
-    for line in lines {
+    for id in ids {
         state
             .db
-            .route_checklist_items
-            .create(checklist_id, &line.tx_id, &added_at)
+            .checklist_items
+            .create(checklist_id, &id, &added_at)
             .await
             .map_err(|err| ApiError::Database(err.to_string()))?;
     }
@@ -195,35 +207,55 @@ pub async fn create_route_checklist_items_from_operators_bulk(
     State(state): State<HttpState>,
     AuthUser { user_id }: AuthUser,
     Path(checklist_id): Path<i64>,
-    Json(operator_ids): axum::Json<Vec<String>>,
+    Json(operator_ids): Json<Vec<String>>,
 ) -> Result<Response, ApiError> {
-    check_route_checklist(state.db.clone(), checklist_id, user_id).await?;
-
+    let checklist = check_route_checklist(state.db.clone(), checklist_id, user_id).await?;
     let added_at = chrono::Utc::now().to_rfc3339();
 
     for operator_id in operator_ids {
-        let lines = state
-            .db
-            .tx_lines
-            .get_by_national_operator_code(&operator_id)
-            .await
-            .map_err(|_| {
-                ApiError::GenericServerError(format!(
-                    "Failed to fetch lines for operator {operator_id}"
-                ))
-            })?;
+        let ids = match checklist.checklist_type {
+            ChecklistType::Service => {
+                state
+                    .db
+                    .tx_lines
+                    .get_by_national_operator_code(operator_id.as_str())
+                    .await
+                    .map_err(|_e| {
+                        ApiError::GenericServerError("Failed to fetch lines by operator".to_string())
+                    })?
+                    .iter().map(|x| x.tx_id.clone())
+                    .collect::<Vec<_>>()
+            }
+            ChecklistType::Vehicle => {
+                state
+                    .db
+                    .vehicles
+                    .get_by_national_operator_code(operator_id.as_str())
+                    .await
+                    .map_err(|_e| {
+                        ApiError::GenericServerError("Failed to fetch vehicles for operator".to_string())
+                    })?
+                    .iter().map(|x| x.id.to_string())
+                    .collect::<Vec<_>>()
+            }
+        };
 
-        for line in lines {
+        for id in ids {
             state
                 .db
-                .route_checklist_items
-                .create(checklist_id, &line.tx_id, &added_at)
+                .checklist_items
+                .create(checklist_id, &id, &added_at)
                 .await
                 .map_err(|err| ApiError::Database(err.to_string()))?;
         }
     }
-
     Ok(StatusCode::NO_CONTENT.into_response())
+}
+
+#[derive(Serialize, Deserialize, IntoParams, ToSchema)]
+pub struct OperatorBulkCountOptions {
+    pub operators: Vec<String>,
+    pub checklist_type: ChecklistType,
 }
 
 #[utoipa::path(
@@ -255,23 +287,39 @@ pub async fn create_route_checklist_items_from_operators_bulk(
 )]
 pub async fn count_lines_from_operators_bulk(
     State(state): State<HttpState>,
-    Json(operator_ids): axum::Json<Vec<String>>,
+    Json(json): Json<OperatorBulkCountOptions>,
 ) -> Result<Response, ApiError> {
     let mut count = 0usize;
 
-    for operator_id in operator_ids {
-        let lines = state
-            .db
-            .tx_lines
-            .get_by_national_operator_code(&operator_id)
-            .await
-            .map_err(|_| {
-                ApiError::GenericServerError(format!(
-                    "Failed to fetch lines for operator {operator_id}"
-                ))
-            })?;
+    for operator_id in json.operators {
+        let ids = match json.checklist_type {
+            ChecklistType::Service => {
+                state
+                    .db
+                    .tx_lines
+                    .get_by_national_operator_code(operator_id.as_str())
+                    .await
+                    .map_err(|_e| {
+                        ApiError::GenericServerError("Failed to fetch lines by operator".to_string())
+                    })?
+                    .iter().map(|x| x.tx_id.clone())
+                    .collect::<Vec<_>>()
+            }
+            ChecklistType::Vehicle => {
+                state
+                    .db
+                    .vehicles
+                    .get_by_national_operator_code(operator_id.as_str())
+                    .await
+                    .map_err(|_e| {
+                        ApiError::GenericServerError("Failed to fetch vehicles for operator".to_string())
+                    })?
+                    .iter().map(|x| x.id.to_string())
+                    .collect::<Vec<_>>()
+            }
+        };
 
-        count += lines.len();
+        count += ids.len();
     }
 
     Ok(axum::Json(count).into_response())
@@ -326,7 +374,7 @@ pub async fn complete_route_checklist_item(
 
     let item = state
         .db
-        .route_checklist_items
+        .checklist_items
         .get(item_id)
         .await
         .map_err(|e| ApiError::Database(e.to_string()))?
@@ -336,7 +384,7 @@ pub async fn complete_route_checklist_item(
 
     state
         .db
-        .route_checklist_items
+        .checklist_items
         .set_completed(
             item.id,
             if let Some(_) = item.completed_at {

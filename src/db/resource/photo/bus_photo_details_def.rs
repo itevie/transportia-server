@@ -1,5 +1,5 @@
 use crate::db::resource::bustimes::livery_def::BtLivery;
-use crate::db::resource::bustimes::vehicle_def::FilledOutBtVehicle;
+use crate::db::resource::bustimes::vehicle_def::BtVehicleFilleOut;
 use crate::db::resource::bustimes::vehicle_type_def::BtVehicleType;
 use crate::db::resource::transxchange::line_def::TxLine;
 use serde::{Deserialize, Serialize};
@@ -21,7 +21,7 @@ pub struct BusPhotoDetails {
 pub struct BusPhotoDetailsFilledOut {
     pub id: i64,
     pub matched_vehicle_id: Option<i64>,
-    pub matched_vehicle: Option<FilledOutBtVehicle>,
+    pub matched_vehicle: Option<BtVehicleFilleOut>,
     pub override_match: bool,
     pub reg: Option<String>,
     pub fleet: Option<String>,

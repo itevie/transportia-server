@@ -4,7 +4,7 @@ use sqlx::PgPool;
 
 use crate::db::Database;
 use crate::db::resource::bustimes::vehicle::BtVehicles;
-use crate::db::resource::bustimes::vehicle_def::FilledOutBtVehicle;
+use crate::db::resource::bustimes::vehicle_def::BtVehicleFilleOut;
 use crate::db::resource::photo::bus_photo_details_def::{
     BusPhotoDetails, BusPhotoDetailsFilledOut, BusPhotoDetailsUpdate,
 };
@@ -137,7 +137,7 @@ impl BusPhotoDetailsManager {
             None => None,
         };
 
-        let matched: Option<FilledOutBtVehicle> = match details.matched_vehicle_id {
+        let matched: Option<BtVehicleFilleOut> = match details.matched_vehicle_id {
             Some(id) => match db.vehicles.get(id).await? {
                 Some(vehicle) => BtVehicles::fill_out(db.clone(), vec![vehicle], None)
                     .await?

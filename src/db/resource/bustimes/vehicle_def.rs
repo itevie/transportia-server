@@ -29,7 +29,7 @@ pub struct BtVehicle {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, FromRow)]
-pub struct FilledOutBtVehicle {
+pub struct BtVehicleFilleOut {
     pub id: i64,
     pub slug: String,
     pub fleet: String,

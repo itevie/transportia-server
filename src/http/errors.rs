@@ -14,6 +14,18 @@ pub enum ApiError {
     NotFound(String),
     UploadedNonImage,
     Unauthorized(String),
+    ValidationError(String),
+}
+
+impl From<sqlx::Error> for ApiError {
+    fn from(error: sqlx::Error) -> Self {
+        match error {
+            sqlx::Error::RowNotFound => {
+                Self::NotFound("Database record not found".into())
+            }
+            error => Self::Database(error.to_string()),
+        }
+    }
 }
 
 impl IntoResponse for ApiError {
@@ -28,6 +40,12 @@ impl IntoResponse for ApiError {
             ApiError::BadRequest(error) => (
                 StatusCode::BAD_REQUEST,
                 error,
+            )
+                .into_response(),
+
+            ApiError::ValidationError(error) => (
+                StatusCode::BAD_REQUEST,
+                format!("Validation Error: {}", error),
             )
                 .into_response(),
 

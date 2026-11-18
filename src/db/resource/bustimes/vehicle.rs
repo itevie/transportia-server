@@ -5,9 +5,10 @@ use sqlx::{PgPool, Postgres, QueryBuilder};
 use utoipa::{IntoParams, ToSchema};
 
 use crate::db::Database;
-use crate::db::resource::bustimes::vehicle_def::{BtVehicle, FilledOutBtVehicle};
+use crate::db::resource::bustimes::vehicle_def::{BtVehicle, BtVehicleFilleOut};
 use crate::db::resource::favourite::favourite_def::FavouriteType;
 use crate::db::resource::photo::photo::Photos;
+use crate::db::resource::transxchange::line_def::TxLine;
 
 pub static SQL_BT_VEHICLE: &str = r#"
 CREATE TABLE IF NOT EXISTS bt_vehicles (
@@ -82,6 +83,25 @@ impl BtVehicles {
         .bind(id)
         .fetch_optional(&self.pool)
         .await
+    }
+
+
+
+    pub async fn get_by_national_operator_code(
+        &self,
+        national_code: &str,
+    ) -> sqlx::Result<Vec<BtVehicle>> {
+        sqlx::query_as::<_, BtVehicle>(
+            r#"
+            SELECT
+                *
+            FROM bt_vehicles
+            WHERE operator_id = $1
+            "#,
+        )
+            .bind(national_code)
+            .fetch_all(&self.pool)
+            .await
     }
 
     pub async fn search(&self, query: &BtVehicleQuery) -> sqlx::Result<Vec<BtVehicle>> {
@@ -429,7 +449,7 @@ impl BtVehicles {
         db: Arc<Database>,
         vehicles: Vec<BtVehicle>,
         user_id: Option<i64>,
-    ) -> sqlx::Result<Vec<FilledOutBtVehicle>> {
+    ) -> sqlx::Result<Vec<BtVehicleFilleOut>> {
         let mut filled_vehicles = Vec::with_capacity(vehicles.len());
 
         for vehicle in vehicles {
@@ -461,7 +481,7 @@ impl BtVehicles {
                 .search(&Photos::query_only_search(vehicle.reg.clone()))
                 .await?;
 
-            filled_vehicles.push(FilledOutBtVehicle {
+            filled_vehicles.push(BtVehicleFilleOut {
                 id: vehicle.id,
                 slug: vehicle.slug,
                 fleet: vehicle.fleet,

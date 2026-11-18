@@ -1,5 +1,5 @@
 use crate::db::Database;
-use crate::db::resource::checklist::checklist_def::RouteChecklist;
+use crate::db::resource::checklist::checklist_def::{Checklist};
 use crate::db::resource::favourite::favourite_group_def::FavouritesGroup;
 use crate::db::resource::photo::photo_def::Photo;
 use crate::http::errors::ApiError;
@@ -9,9 +9,9 @@ pub async fn check_route_checklist(
     db: Arc<Database>,
     checklist_id: i64,
     user_id: i64,
-) -> Result<RouteChecklist, ApiError> {
+) -> Result<Checklist, ApiError> {
     let checklist = db
-        .route_checklists
+        .checklists
         .get(checklist_id)
         .await
         .map_err(|e| ApiError::Database(e.to_string()))?

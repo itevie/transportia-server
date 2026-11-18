@@ -5,7 +5,7 @@ use axum::response::{IntoResponse, Response};
 use serde::Deserialize;
 use utoipa::ToSchema;
 use crate::auth::quick::check_favourites_group;
-use crate::db::resources::favourites_group::FavouritesGroup;
+use crate::db::resource::favourite::favourite_group_def::FavouritesGroup;
 use crate::extractors::authenticator::AuthUser;
 use crate::http::errors::ApiError;
 use crate::http::HttpState;
@@ -52,12 +52,14 @@ pub async fn create_favourite_group(
             &data.name,
             &chrono::Utc::now().to_rfc3339(),
         )
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     let group = state
         .db
         .favourites_groups
         .get(id)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?
         .ok_or_else(|| {
             ApiError::Database("Created favourite group could not be found".to_string())
@@ -107,7 +109,7 @@ pub async fn update_favourite_group(
     Path(id): Path<i64>,
     Json(data): Json<FavouriteGroupUpdate>,
 ) -> Result<Response, ApiError> {
-    let mut group = check_favourites_group(state.db.clone(), id, user_id)?;
+    let mut group = check_favourites_group(state.db.clone(), id, user_id).await?;
 
     group.favourite_type = data.favourite_type;
     group.name = data.name;
@@ -116,6 +118,7 @@ pub async fn update_favourite_group(
         .db
         .favourites_groups
         .update(&group)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     Ok((StatusCode::OK, Json(group)).into_response())
@@ -149,11 +152,12 @@ pub async fn delete_favourite_group(
     AuthUser { user_id }: AuthUser,
     Path(id): Path<i64>,
 ) -> Result<Response, ApiError> {
-    check_favourites_group(state.db.clone(), id, user_id)?;
+    check_favourites_group(state.db.clone(), id, user_id).await?;
     state
         .db
         .favourites_groups
         .delete(id)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     Ok(StatusCode::NO_CONTENT.into_response())

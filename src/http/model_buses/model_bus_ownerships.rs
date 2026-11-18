@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
 use crate::auth::quick::{is_admin, is_trusted_user};
-use crate::db::model_bus_ownerships::{ModelBusOwnershipQuery, ModelBusOwnerships};
-use crate::db::resources::model_bus_ownership::{ModelBusOwnership, ModelBusOwnershipFilledOut};
+use crate::db::resource::model_bus::model_bus_ownership::{ModelBusOwnershipQuery, ModelBusOwnerships};
+use crate::db::resource::model_bus::model_bus_ownership_def::{ModelBusOwnership, ModelBusOwnershipFilledOut};
 use crate::extractors::authenticator::AuthUser;
 use crate::extractors::optional_authenticator::OptionalAuthUser;
 use crate::http::errors::ApiError;
@@ -63,9 +63,11 @@ pub async fn search_model_bus_ownerships(
         .db
         .model_bus_ownerships
         .search(&query)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     let filled = ModelBusOwnerships::fill_out(state.db.clone(), ownerships, Some(user_id))
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     Ok(Json(filled))
@@ -107,6 +109,7 @@ pub async fn get_model_bus_ownership(
         .db
         .model_bus_ownerships
         .get(id)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?
         .filter(|ownership| ownership.user_id == user_id)
         .ok_or_else(|| {
@@ -115,6 +118,7 @@ pub async fn get_model_bus_ownership(
 
 
     let filled = ModelBusOwnerships::fill_out(state.db.clone(), vec![ownership], Some(user_id))
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     Ok(Json(filled.get(0).unwrap().clone()))
@@ -154,7 +158,7 @@ pub async fn create_model_bus_ownership(
     AuthUser { user_id }: AuthUser,
     Json(body): Json<ModelBusOwnershipCreateRequest>,
 ) -> Result<Response, ApiError> {
-    is_trusted_user(state.db.clone(), user_id)?;
+    is_trusted_user(state.db.clone(), user_id).await?;
 
     let ownership = ModelBusOwnership {
         id: 0,
@@ -170,6 +174,7 @@ pub async fn create_model_bus_ownership(
         .db
         .model_bus_ownerships
         .create(&ownership)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     Ok((
@@ -220,12 +225,13 @@ pub async fn update_model_bus_ownership(
     AuthUser { user_id }: AuthUser,
     Json(body): Json<ModelBusOwnershipUpdateRequest>,
 ) -> Result<Response, ApiError> {
-    is_trusted_user(state.db.clone(), user_id)?;
+    is_trusted_user(state.db.clone(), user_id).await?;
 
     let mut ownership = state
         .db
         .model_bus_ownerships
         .get(id)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?
         .filter(|ownership| ownership.user_id == user_id)
         .ok_or_else(|| {
@@ -248,6 +254,7 @@ pub async fn update_model_bus_ownership(
         .db
         .model_bus_ownerships
         .upsert(&ownership)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     Ok(StatusCode::NO_CONTENT.into_response())
@@ -292,12 +299,13 @@ pub async fn delete_model_bus_ownership(
     Path(id): Path<i64>,
     AuthUser { user_id }: AuthUser,
 ) -> Result<Response, ApiError> {
-    is_admin(state.db.clone(), user_id)?;
+    is_admin(state.db.clone(), user_id).await?;
 
     state
         .db
         .model_bus_ownerships
         .get(id)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?
         .ok_or_else(|| {
             ApiError::NotFound("Model bus ownership not found".to_string())
@@ -307,6 +315,7 @@ pub async fn delete_model_bus_ownership(
         .db
         .model_bus_ownerships
         .delete(id)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     Ok(StatusCode::NO_CONTENT.into_response())

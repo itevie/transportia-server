@@ -2,11 +2,10 @@ use anyhow::{Context, Result};
 use chrono::Local;
 use quick_xml::de::from_reader;
 use serde::Deserialize;
-
-use crate::db::resources::tx_line::TxLine;
-use crate::db::resources::tx_operator::TxOperator;
-use crate::db::resources::tx_service::TxService;
-use crate::db::resources::tx_vehicle_journey::TxVehicleJourney;
+use crate::db::resource::transxchange::line_def::TxLine;
+use crate::db::resource::transxchange::operator_def::TxOperator;
+use crate::db::resource::transxchange::service_def::TxService;
+use crate::db::resource::transxchange::vehicle_journey_def::TxVehicleJourney;
 
 #[derive(Debug, Deserialize)]
 struct TransXChange {

@@ -3,6 +3,8 @@ use axum::http::StatusCode;
 use axum::Json;
 use axum::response::{IntoResponse, Response};
 use crate::db;
+use crate::db::resource::user::def::User;
+use crate::db::resource::user::UserQuery;
 use crate::extractors::authenticator::AuthUser;
 use crate::http::HttpState;
 use crate::http::errors::ApiError;
@@ -16,7 +18,7 @@ use crate::http::errors::ApiError;
         ("id" = i64, Path, description = "User ID")
     ),
     responses(
-        (status = 200, description = "User", body = db::resources::user::User),
+        (status = 200, description = "User", body = User),
         (status = 404, description = "User not found"),
         (status = 500, description = "Internal server error")
     )
@@ -29,6 +31,7 @@ pub async fn get_user(
         .db
         .users
         .get(id, false)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?
         .ok_or(ApiError::UserNotFound)?;
 
@@ -41,7 +44,7 @@ pub async fn get_user(
     tag = "Users",
     summary = "Get the current user",
     responses(
-        (status = 200, description = "Current user", body = db::resources::user::User),
+        (status = 200, description = "Current user", body = User),
         (status = 401, description = "Unauthorized"),
         (status = 404, description = "User not found"),
         (status = 500, description = "Internal server error")
@@ -58,6 +61,7 @@ pub async fn me(
         .db
         .users
         .get(user_id, true)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?
         .ok_or(ApiError::UserNotFound)?;
     
@@ -70,21 +74,22 @@ pub async fn me(
     tag = "Users",
     summary = "Search users",
     params(
-        db::users::UserQuery
+        UserQuery
     ),
     responses(
-        (status = 200, description = "Matching users", body = [db::resources::user::User]),
+        (status = 200, description = "Matching users", body = [User]),
         (status = 500, description = "Internal server error")
     )
 )]
 pub async fn search_users(
     State(state): State<HttpState>,
-    Query(query): Query<db::users::UserQuery>,
-) -> Result<Json<Vec<db::resources::user::User>>, String> {
+    Query(query): Query<UserQuery>,
+) -> Result<Json<Vec<User>>, String> {
     let listings = state
         .db
         .users
         .search(&query)
+        .await
         .map_err(|err| err.to_string())?;
 
     Ok(Json(listings))

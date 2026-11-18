@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
 use crate::auth::quick::{is_admin, is_trusted_user};
-use crate::db::resources::tram_livery::TramLivery;
+use crate::db::resource::tram::tram_livery_def::TramLivery;
 use crate::extractors::authenticator::AuthUser;
 use crate::extractors::optional_authenticator::OptionalAuthUser;
 use crate::http::errors::ApiError;
@@ -64,6 +64,7 @@ pub async fn search_tram_liveries(
         .db
         .tram_liveries
         .search(query.query.as_deref().unwrap_or(""))
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     Ok(Json(liveries))
@@ -102,6 +103,7 @@ pub async fn get_tram_livery(
         .db
         .tram_liveries
         .get(id)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?
         .ok_or_else(|| {
             ApiError::NotFound("Tram livery not found".to_string())
@@ -144,7 +146,7 @@ pub async fn create_tram_livery(
     AuthUser { user_id }: AuthUser,
     Json(body): Json<TramLiveryCreateRequest>,
 ) -> Result<Response, ApiError> {
-    is_trusted_user(state.db.clone(), user_id)?;
+    is_trusted_user(state.db.clone(), user_id).await?;
 
     let livery = TramLivery {
         id: 0,
@@ -157,6 +159,7 @@ pub async fn create_tram_livery(
         .db
         .tram_liveries
         .create(&livery)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     Ok((
@@ -207,12 +210,13 @@ pub async fn update_tram_livery(
     AuthUser { user_id }: AuthUser,
     Json(body): Json<TramLiveryUpdateRequest>,
 ) -> Result<Response, ApiError> {
-    is_trusted_user(state.db.clone(), user_id)?;
+    is_trusted_user(state.db.clone(), user_id).await?;
 
     let mut livery = state
         .db
         .tram_liveries
         .get(id)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?
         .ok_or_else(|| {
             ApiError::NotFound("Tram livery not found".to_string())
@@ -234,6 +238,7 @@ pub async fn update_tram_livery(
         .db
         .tram_liveries
         .update(&livery)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     Ok(StatusCode::NO_CONTENT.into_response())
@@ -278,12 +283,13 @@ pub async fn delete_tram_livery(
     Path(id): Path<i64>,
     AuthUser { user_id }: AuthUser,
 ) -> Result<Response, ApiError> {
-    is_admin(state.db.clone(), user_id)?;
+    is_admin(state.db.clone(), user_id).await?;
 
     state
         .db
         .tram_liveries
         .get(id)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?
         .ok_or_else(|| {
             ApiError::NotFound("Tram livery not found".to_string())
@@ -293,6 +299,7 @@ pub async fn delete_tram_livery(
         .db
         .tram_liveries
         .delete(id)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     Ok(StatusCode::NO_CONTENT.into_response())

@@ -2,8 +2,8 @@ use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::Json;
 
-use crate::db::photo::Photos;
-use crate::db::resources::model_bus_photo_details::ModelBusPhotoDetailsUpdate;
+use crate::db::resource::photo::model_bus_photo_details_def::ModelBusPhotoDetailsUpdate;
+use crate::db::resource::photo::photo::Photos;
 use crate::http::errors::ApiError;
 use crate::http::HttpState;
 
@@ -37,16 +37,19 @@ pub async fn update_details(
         .db
         .photos
         .get(id)
+        .await
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?
         .ok_or_else(|| ApiError::NotFound("Photo not found".to_string()))?;
 
     let model_bus_details = Photos::get_model_bus_details(state.db.clone(), photo)
+        .await
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 
     state
         .db
         .model_bus_photo_details
         .update(model_bus_details.id, &update)
+        .await
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 
     Ok(StatusCode::NO_CONTENT)

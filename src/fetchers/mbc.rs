@@ -2,7 +2,7 @@ use std::time::Duration;
 use reqwest::{Client, Url};
 use serde::Deserialize;
 use tokio::time::sleep;
-use crate::db::resources::bus_listing::BusListingResource;
+use crate::db::resource::model_bus_listings::model_bus_listing_def::BusListingResource;
 use crate::fetchers::model_manufacturers::{get_manufacturer_code, KNOWN_MANUFACTURERS};
 
 pub async fn fetch() -> Result<Vec<BusListingResource>, Box<dyn std::error::Error>> {

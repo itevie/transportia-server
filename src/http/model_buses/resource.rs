@@ -7,8 +7,8 @@ use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
 use crate::auth::quick::{is_admin, is_trusted_user};
-use crate::db::model_buses::{ModelBusQuery, ModelBuses};
-use crate::db::resources::model_bus::{ModelBus, ModelBusFilledOut};
+use crate::db::resource::model_bus::model_bus::{ModelBusQuery, ModelBuses};
+use crate::db::resource::model_bus::model_bus_def::{ModelBus, ModelBusFilledOut};
 use crate::extractors::authenticator::AuthUser;
 use crate::extractors::optional_authenticator::OptionalAuthUser;
 use crate::http::errors::ApiError;
@@ -104,9 +104,11 @@ pub async fn search_model_buses(
         .db
         .model_buses
         .search(&query)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     let filled_out = ModelBuses::fill_out(state.db.clone(), model_buses, None)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     Ok(Json(filled_out))
@@ -163,9 +165,11 @@ pub async fn search_potential_model_buses_for_vehicle(
             page_length: None,
             offset: None,
         })
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     let filled_out = ModelBuses::fill_out(state.db.clone(), model_buses, None)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     Ok(Json(filled_out))
@@ -204,12 +208,14 @@ pub async fn get_model_bus(
         .db
         .model_buses
         .get(id)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?
         .ok_or_else(|| {
             ApiError::NotFound("Model bus not found".to_string())
         })?;
 
     let filled_out = ModelBuses::fill_out(state.db.clone(), vec![model_bus], None)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     Ok(Json(filled_out.get(0).unwrap().clone()))
@@ -249,7 +255,7 @@ pub async fn create_model_bus(
     AuthUser { user_id }: AuthUser,
     Json(body): Json<ModelBusCreateRequest>,
 ) -> Result<Response, ApiError> {
-    is_trusted_user(state.db.clone(), user_id)?;
+    is_trusted_user(state.db.clone(), user_id).await?;
 
     let now = chrono::Utc::now().to_rfc3339();
 
@@ -290,6 +296,7 @@ pub async fn create_model_bus(
         .db
         .model_buses
         .create(&model_bus)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     Ok((
@@ -340,12 +347,13 @@ pub async fn update_model_bus(
     AuthUser { user_id }: AuthUser,
     Json(body): Json<ModelBusUpdateRequest>,
 ) -> Result<Response, ApiError> {
-    is_trusted_user(state.db.clone(), user_id)?;
+    is_trusted_user(state.db.clone(), user_id).await?;
 
     let mut model_bus = state
         .db
         .model_buses
         .get(id)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?
         .ok_or_else(|| {
             ApiError::NotFound("Model bus not found".to_string())
@@ -429,6 +437,7 @@ pub async fn update_model_bus(
         .db
         .model_buses
         .upsert(&model_bus)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     Ok(StatusCode::NO_CONTENT.into_response())
@@ -473,12 +482,13 @@ pub async fn delete_model_bus(
     Path(id): Path<i64>,
     AuthUser { user_id }: AuthUser,
 ) -> Result<Response, ApiError> {
-    is_admin(state.db.clone(), user_id)?;
+    is_admin(state.db.clone(), user_id).await?;
 
     state
         .db
         .model_buses
         .get(id)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?
         .ok_or_else(|| {
             ApiError::NotFound("Model bus not found".to_string())
@@ -488,6 +498,7 @@ pub async fn delete_model_bus(
         .db
         .model_buses
         .delete(id)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     Ok(StatusCode::NO_CONTENT.into_response())

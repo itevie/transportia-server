@@ -2,9 +2,8 @@ use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::Json;
 use axum::response::{IntoResponse, Response};
-use crate::auth::quick::check_favourites_group;
-use crate::db::favourites_groups::FavouriteGroupQuery;
-use crate::db::resources::favourites_group::FavouritesGroup;
+use crate::db::resource::favourite::favourite_group::{FavouriteGroupQuery};
+use crate::db::resource::favourite::favourite_group_def::FavouritesGroup;
 use crate::extractors::authenticator::AuthUser;
 use crate::http::errors::ApiError;
 use crate::http::HttpState;
@@ -42,6 +41,7 @@ pub async fn fetch_favourite_groups(
         .db
         .favourites_groups
         .search(&query, user_id)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     Ok((StatusCode::OK, Json(groups)).into_response())

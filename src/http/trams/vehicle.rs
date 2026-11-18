@@ -7,8 +7,8 @@ use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
 use crate::auth::quick::{is_admin, is_trusted_user};
-use crate::db::resources::tram::{Tram, TramFilledOut};
-use crate::db::trams::{TramQuery, Trams};
+use crate::db::resource::tram::tram::{TramQuery, Trams};
+use crate::db::resource::tram::tram_def::{Tram, TramFilledOut};
 use crate::extractors::authenticator::AuthUser;
 use crate::extractors::optional_authenticator::OptionalAuthUser;
 use crate::http::errors::ApiError;
@@ -75,9 +75,11 @@ pub async fn search_trams(
         .db
         .trams
         .search(&query)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     let filled_out = Trams::fill_out(state.db.clone(), trams, user.map(|x| x.user_id))
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     Ok(Json(filled_out))
@@ -116,10 +118,12 @@ pub async fn get_tram(
         .db
         .trams
         .get(id)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?
         .ok_or_else(|| ApiError::NotFound("Tram not found".to_string()))?;
 
     let filled_out = Trams::fill_out(state.db.clone(), vec![tram], user.map(|x| x.user_id))
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     Ok(Json(filled_out.get(0).unwrap().clone()))
@@ -159,9 +163,7 @@ pub async fn create_tram(
     AuthUser { user_id }: AuthUser,
     Json(body): Json<TramCreateRequest>,
 ) -> Result<Response, ApiError> {
-    is_trusted_user(state.db.clone(), user_id)?;
-
-    println!("{:?}", body);
+    is_trusted_user(state.db.clone(), user_id).await?;
 
     let tram = Tram {
         id: 0,
@@ -179,6 +181,7 @@ pub async fn create_tram(
         .db
         .trams
         .create(&tram)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     Ok((
@@ -229,12 +232,13 @@ pub async fn update_tram(
     AuthUser { user_id }: AuthUser,
     Json(body): Json<TramUpdateRequest>,
 ) -> Result<Response, ApiError> {
-    is_trusted_user(state.db.clone(), user_id)?;
+    is_trusted_user(state.db.clone(), user_id).await?;
 
     let mut tram = state
         .db
         .trams
         .get(id)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?
         .ok_or_else(|| ApiError::NotFound("Tram not found".to_string()))?;
 
@@ -274,6 +278,7 @@ pub async fn update_tram(
         .db
         .trams
         .update(&tram)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     Ok(StatusCode::NO_CONTENT.into_response())
@@ -318,12 +323,13 @@ pub async fn delete_tram(
     Path(id): Path<i64>,
     AuthUser { user_id }: AuthUser,
 ) -> Result<Response, ApiError> {
-    is_admin(state.db.clone(), user_id)?;
+    is_admin(state.db.clone(), user_id).await?;
 
     state
         .db
         .trams
         .get(id)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?
         .ok_or_else(|| ApiError::NotFound("Tram not found".to_string()))?;
 
@@ -331,6 +337,7 @@ pub async fn delete_tram(
         .db
         .trams
         .delete(id)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     Ok(StatusCode::NO_CONTENT.into_response())

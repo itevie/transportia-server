@@ -5,7 +5,6 @@ pub mod util;
 mod extractors;
 mod bods;
 mod auth;
-mod db_postgres;
 
 use std::sync::Arc;
 use axum::extract::DefaultBodyLimit;
@@ -17,8 +16,7 @@ use tracing_subscriber::EnvFilter;
 use utoipa::OpenApi;
 use crate::bods::datafeed::BodsSiriVmClient;
 use crate::db::create_missing_comment_threads;
-use crate::db::resources::tram_announcement_audio::TramAnnouncementAudio;
-use crate::db::tram_announcement_audios::TramAnnouncementAudios;
+use crate::db::resource::tram::tram_announcement_audio::TramAnnouncementAudios;
 use crate::fetchers::ttcdiecast::scrape_products;
 use crate::http::{ApiDoc, HttpState};
 
@@ -31,7 +29,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_target(true)
         .init();
 
-    let db = match db::init_db() {
+    let db = match db::init_db().await {
         Ok(db) => db,
         Err(err) => {
             println!("Error init db: {:?}", err);
@@ -39,16 +37,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
-
     let db_arc = Arc::new(db);
 
-    match TramAnnouncementAudios::scan_tram_audios(db_arc.clone(), "./data/tram_audios") {
+    match TramAnnouncementAudios::scan_tram_audios(db_arc.clone(), "./data/tram_audios").await {
         Ok(_) => println!("Scanned tram announcements!"),
         Err(e) => eprintln!("Failed to scan tram announcements: {}", e.to_string())
     };
 
-    create_missing_comment_threads(db_arc.clone(), "tx_operators")?;
-    create_missing_comment_threads(db_arc.clone(), "bt_vehicles")?;
+    println!("Creating comment threads");
+    create_missing_comment_threads(db_arc.clone(), "tx_operators").await?;
+    create_missing_comment_threads(db_arc.clone(), "bt_vehicles").await?;
+    create_missing_comment_threads(db_arc.clone(), "photos").await?;
+    // create_missing_comment_threads(db_arc.clone(), "tx_routes").await?;
+    println!("Created comment threads");
 
     fetchers::run_all_in_background(db_arc.clone());
 

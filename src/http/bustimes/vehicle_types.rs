@@ -2,9 +2,7 @@ use axum::extract::{Path, Query, State};
 use axum::Json;
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
-use crate::db;
-use crate::db::vehicles::BtVehicles;
-use crate::extractors::optional_authenticator::OptionalAuthUser;
+use crate::db::resource::bustimes::vehicle_type_def::BtVehicleType;
 use crate::http::errors::ApiError;
 use crate::http::HttpState;
 
@@ -23,7 +21,7 @@ pub struct VehicleTypeSearch {
         (
             status = 200,
             description = "Vehicle types matching the search query",
-            body = [db::resources::bt_vehicle_type::BtVehicleType]
+            body = [BtVehicleType]
         ),
         (
             status = 500,
@@ -34,11 +32,12 @@ pub struct VehicleTypeSearch {
 pub async fn search_vehicle_types(
     State(state): State<HttpState>,
     Query(query): Query<VehicleTypeSearch>,
-) -> Result<Json<Vec<db::resources::bt_vehicle_type::BtVehicleType>>, ApiError> {
+) -> Result<Json<Vec<BtVehicleType>>, ApiError> {
     let listings = state
         .db
         .vehicle_types
         .search(&query.query)
+        .await
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 
     Ok(Json(listings))
@@ -56,7 +55,7 @@ pub async fn search_vehicle_types(
         (
             status = 200,
             description = "Vehicle Type",
-            body = db::resources::bt_vehicle_type::BtVehicleType
+            body = BtVehicleType
         ),
         (
             status = 404,
@@ -71,14 +70,14 @@ pub async fn search_vehicle_types(
 pub async fn get_vehicle_type(
     State(state): State<HttpState>,
     Path(id): Path<i64>,
-) -> Result<Json<db::resources::bt_vehicle_type::BtVehicleType>, String> {
+) -> Result<Json<BtVehicleType>, String> {
     let vehicle = state
         .db
         .vehicle_types
         .get(id)
+        .await
         .map_err(|err| err.to_string())?
         .ok_or_else(|| "Vehicle type not found".to_string())?;
-
 
     Ok(Json(vehicle))
 }

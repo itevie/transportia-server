@@ -5,8 +5,8 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
-use crate::db::photo::Photos;
-use crate::db::resources::photo::{PhotoFilledOut, Photo, PhotoType, PhotoDetails};
+use crate::db::resource::photo::photo::Photos;
+use crate::db::resource::photo::photo_def::{Photo, PhotoFilledOut, PhotoType};
 use crate::extractors::authenticator::AuthUser;
 use crate::http::errors::ApiError;
 use crate::http::HttpState;
@@ -115,12 +115,13 @@ pub async fn upload_image(
             title: "".to_string(),
             description: None,
             created_at: chrono::Utc::now().to_rfc3339(),
-        }).map_err(|err| ApiError::GenericServerError(err.to_string()))?;
+        }).await.map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 
         photos.push(photo);
     }
 
     let filled_out = Photos::fill_out(state.db.clone(), photos, Some(user_id))
+        .await
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 
     Ok((StatusCode::OK, Json(filled_out)).into_response())

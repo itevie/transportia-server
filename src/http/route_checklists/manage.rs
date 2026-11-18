@@ -5,7 +5,7 @@ use axum::response::{IntoResponse, Response};
 use serde::Deserialize;
 use utoipa::ToSchema;
 use crate::auth::quick::check_route_checklist;
-use crate::db::resources::route_checklist::RouteChecklist;
+use crate::db::resource::checklist::checklist_def::RouteChecklist;
 use crate::extractors::authenticator::AuthUser;
 use crate::http::errors::ApiError;
 use crate::http::HttpState;
@@ -52,6 +52,7 @@ pub async fn create_route_checklist(
             user_id,
             &chrono::Utc::now().to_rfc3339(),
         )
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     Ok((StatusCode::CREATED, Json(checklist)).into_response())
@@ -97,12 +98,13 @@ pub async fn delete_route_checklist(
     AuthUser { user_id }: AuthUser,
     Path(id): Path<i64>,
 ) -> Result<Response, ApiError> {
-    check_route_checklist(state.db.clone(), id, user_id)?;
+    check_route_checklist(state.db.clone(), id, user_id).await?;
 
     state
         .db
         .route_checklists
         .delete(id)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     Ok(StatusCode::NO_CONTENT.into_response())

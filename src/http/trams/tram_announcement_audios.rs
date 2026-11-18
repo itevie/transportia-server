@@ -7,10 +7,8 @@ use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
 use crate::auth::quick::{is_admin, is_trusted_user};
-use crate::db::resources::tram_announcement_audio::{
-    TramAnnouncementAudio,
-};
-use crate::db::tram_announcement_audios::TramAnnouncementAudioQuery;
+use crate::db::resource::tram::tram_announcement_audio::TramAnnouncementAudioQuery;
+use crate::db::resource::tram::tram_announcement_audio_def::TramAnnouncementAudio;
 use crate::extractors::authenticator::AuthUser;
 use crate::extractors::optional_authenticator::OptionalAuthUser;
 use crate::http::errors::ApiError;
@@ -80,6 +78,7 @@ pub async fn search_tram_announcement_audios(
             page_length: query.page_length,
             offset: query.offset,
         })
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     Ok(Json(audios))
@@ -118,6 +117,7 @@ pub async fn get_tram_announcement_audio(
         .db
         .tram_announcement_audios
         .get(id)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?
         .ok_or_else(|| {
             ApiError::NotFound(
@@ -142,6 +142,7 @@ pub async fn get_tram_announcement_audio_groups(
 ) -> Result<impl IntoResponse, ApiError> {
     let groups = state.db.tram_announcement_audios
         .get_groups()
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     Ok(Json(groups))
@@ -188,12 +189,13 @@ pub async fn update_tram_announcement_audio(
     AuthUser { user_id }: AuthUser,
     Json(body): Json<TramAnnouncementAudioUpdateRequest>,
 ) -> Result<Response, ApiError> {
-    is_trusted_user(state.db.clone(), user_id)?;
+    is_trusted_user(state.db.clone(), user_id).await?;
 
     let mut audio = state
         .db
         .tram_announcement_audios
         .get(id)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?
         .ok_or_else(|| {
             ApiError::NotFound(
@@ -221,6 +223,7 @@ pub async fn update_tram_announcement_audio(
         .db
         .tram_announcement_audios
         .update(&audio)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     Ok(StatusCode::NO_CONTENT.into_response())
@@ -262,6 +265,7 @@ pub async fn get_tram_announcement_audio_file(
         .db
         .tram_announcement_audios
         .get(id)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?
         .ok_or_else(|| {
             ApiError::NotFound(

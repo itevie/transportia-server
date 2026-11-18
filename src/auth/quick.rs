@@ -1,14 +1,15 @@
 use std::sync::Arc;
 use crate::db::Database;
-use crate::db::resources::favourites_group::FavouritesGroup;
-use crate::db::resources::photo::Photo;
-use crate::db::resources::route_checklist::RouteChecklist;
+use crate::db::resource::checklist::checklist_def::RouteChecklist;
+use crate::db::resource::favourite::favourite_group_def::FavouritesGroup;
+use crate::db::resource::photo::photo_def::Photo;
 use crate::http::errors::ApiError;
 
-pub fn check_route_checklist(db: Arc<Database>, checklist_id: i64, user_id: i64) -> Result<RouteChecklist, ApiError> {
+pub async fn check_route_checklist(db: Arc<Database>, checklist_id: i64, user_id: i64) -> Result<RouteChecklist, ApiError> {
     let checklist = db
         .route_checklists
         .get(checklist_id)
+        .await
         .map_err(|e| ApiError::Database(e.to_string()))?
         .ok_or_else(|| ApiError::NotFound(checklist_id.to_string()))?;
 
@@ -21,10 +22,11 @@ pub fn check_route_checklist(db: Arc<Database>, checklist_id: i64, user_id: i64)
     Ok(checklist)
 }
 
-pub fn check_favourites_group(db: Arc<Database>, favourites_group_id: i64, user_id: i64) -> Result<FavouritesGroup, ApiError> {
+pub async fn check_favourites_group(db: Arc<Database>, favourites_group_id: i64, user_id: i64) -> Result<FavouritesGroup, ApiError> {
     let group = db
         .favourites_groups
         .get(favourites_group_id)
+        .await
         .map_err(|e| ApiError::Database(e.to_string()))?
         .ok_or_else(|| ApiError::NotFound(favourites_group_id.to_string()))?;
 
@@ -37,10 +39,11 @@ pub fn check_favourites_group(db: Arc<Database>, favourites_group_id: i64, user_
     Ok(group)
 }
 
-pub fn check_photo(db: Arc<Database>, photo_id: i64, user_id: i64) -> Result<Photo, ApiError> {
+pub async fn check_photo(db: Arc<Database>, photo_id: i64, user_id: i64) -> Result<Photo, ApiError> {
     let photo = db
         .photos
         .get(photo_id)
+        .await
         .map_err(|e| ApiError::Database(e.to_string()))?
         .ok_or_else(|| ApiError::NotFound(photo_id.to_string()))?;
 
@@ -53,10 +56,11 @@ pub fn check_photo(db: Arc<Database>, photo_id: i64, user_id: i64) -> Result<Pho
     Ok(photo)
 }
 
-pub fn is_trusted_user(db: Arc<Database>, user_id: i64) -> Result<bool, ApiError> {
+pub async fn is_trusted_user(db: Arc<Database>, user_id: i64) -> Result<bool, ApiError> {
     let user = db
         .users
         .get(user_id, false)
+        .await
         .map_err(|e| ApiError::Database(e.to_string()))?;
     
     match user {
@@ -69,10 +73,11 @@ pub fn is_trusted_user(db: Arc<Database>, user_id: i64) -> Result<bool, ApiError
     }
 }
 
-pub fn is_admin(db: Arc<Database>, user_id: i64) -> Result<bool, ApiError> {
+pub async fn is_admin(db: Arc<Database>, user_id: i64) -> Result<bool, ApiError> {
     let user = db
         .users
         .get(user_id, false)
+        .await
         .map_err(|e| ApiError::Database(e.to_string()))?;
 
     match user {

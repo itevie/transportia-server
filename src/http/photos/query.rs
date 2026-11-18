@@ -3,7 +3,8 @@ use axum::http::StatusCode;
 use axum::Json;
 use axum::response::{IntoResponse, Response};
 use crate::db;
-use crate::db::photo::{PhotoQuery, Photos};
+use crate::db::resource::photo::photo::{PhotoQuery, Photos};
+use crate::db::resource::photo::photo_def::PhotoFilledOut;
 use crate::extractors::optional_authenticator::OptionalAuthUser;
 use crate::http::errors::ApiError;
 use crate::http::HttpState;
@@ -18,7 +19,7 @@ use crate::http::HttpState;
         (
             status = 200,
             description = "List of photos",
-            body = [db::resources::photo::PhotoFilledOut]
+            body = [PhotoFilledOut]
         ),
         (
             status = 500,
@@ -30,14 +31,16 @@ pub async fn query_photos(
     State(state): State<HttpState>,
     OptionalAuthUser(user): OptionalAuthUser,
     Query(query): Query<PhotoQuery>,
-) -> Result<Json<Vec<db::resources::photo::PhotoFilledOut>>, ApiError> {
+) -> Result<Json<Vec<PhotoFilledOut>>, ApiError> {
     let photos = state
         .db
         .photos
         .search(&query)
+        .await
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 
     let filled_out = Photos::fill_out(state.db.clone(), photos, user.map(|x| x.user_id))
+        .await
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 
     Ok(Json(filled_out))
@@ -59,7 +62,7 @@ pub async fn query_photos(
         (
             status = 200,
             description = "Photo details",
-            body = db::resources::photo::PhotoFilledOut
+            body = PhotoFilledOut
         ),
         (
             status = 404,
@@ -80,10 +83,12 @@ pub async fn get_photo(
         .db
         .photos
         .get(id)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?
         .ok_or(ApiError::UserNotFound)?;
     
     let filled_out = Photos::fill_out(state.db.clone(), vec![photo], user.map(|x| x.user_id))
+        .await
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 
     Ok((StatusCode::OK, Json(filled_out[0].clone())).into_response())

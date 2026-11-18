@@ -2,7 +2,7 @@ use std::path::Path;
 use std::sync::Arc;
 use chrono::TimeDelta;
 use crate::db::Database;
-use crate::db::last_fetches::LastFetch;
+use crate::db::resource::last_fetch::last_fetch::LastFetch;
 use crate::fetchers::transxchange_parser::parse_transxchange;
 
 pub mod mbc;
@@ -19,68 +19,34 @@ pub fn run_all_in_background(db: Arc<Database>) {
 }
 
 pub async fn run_all(db: Arc<Database>) {
-    let last_fetches = db.last_fetches.get().unwrap();
+    let last_fetches = db.last_fetches.get().await.unwrap();
     
     
     if 1 == 2 {
         let db2 = Arc::clone(&db);
 
+        let mut parsed_results = Vec::new();
+
         match transxchange::for_each_xml(
             Path::new("/home/isabella/Documents/projects/rust/transportia/tx/bodds.zip"),
             |name, xml| {
                 println!("Processing: {name}");
-                let result = parse_transxchange(&xml);
 
-
-                let ok = match result {
+                match parse_transxchange(&xml) {
                     Ok(ok) => {
-                        println!("Found {} ({}) running {} lines {} trips {} services", ok.0.short_name, ok.0.id, ok.1.len(), ok.2.len(), ok.3.len());
-                        ok
-                    },
-                    Err(err) => {
-                        eprintln!("{:#?}", err);
-                        return Ok(());
+                        println!(
+                            "Found {} ({}) running {} lines {} trips {} services",
+                            ok.0.short_name,
+                            ok.0.id,
+                            ok.1.len(),
+                            ok.2.len(),
+                            ok.3.len()
+                        );
+
+                        parsed_results.push(ok);
                     }
-                };
-                //
-                // match db2.tx_vehicle_journeys.upsert_many(&*ok.2) {
-                //     Ok(_) => (),
-                //     Err(err) => {
-                //         eprintln!("{:#?}", err);
-                //     }
-                // }
-                //
-                // match db2.tx_services.upsert_many(&*ok.3) {
-                //     Ok(_) => (),
-                //     Err(err) => {
-                //         eprintln!("{:#?}", err);
-                //     }
-                // }
-
-                // for trip in ok.2 {
-                //     match db2.tx_vehicle_journeys.upsert(&trip) {
-                //         Ok(_) => (),
-                //         Err(err) => {
-                //             eprintln!("{:#?}", err);
-                //             continue;
-                //         }
-                //     }
-                // }
-
-
-
-                match db2.tx_lines.upsert_many(&*ok.1) {
-                    Ok(_) => (),
                     Err(err) => {
                         eprintln!("{:#?}", err);
-                    }
-                }
-
-                match db2.tx_operators.upsert(&ok.0) {
-                    Ok(_) => (),
-                    Err(err) => {
-                        eprintln!("{:#?}", err);
-                        return Ok(());
                     }
                 }
 
@@ -91,6 +57,23 @@ pub async fn run_all(db: Arc<Database>) {
             Err(err) => {
                 eprintln!("{:#?}", err);
                 return;
+            }
+        }
+
+        for (operator, lines, journeys, services) in parsed_results {
+            match db2.tx_operators.upsert(&operator).await {
+                Ok(_) => (),
+                Err(err) => {
+                    eprintln!("{:#?}", err);
+                    continue;
+                }
+            }
+
+            match db2.tx_lines.upsert_many(&lines).await {
+                Ok(_) => (),
+                Err(err) => {
+                    eprintln!("{:#?}", err);
+                }
             }
         }
     }
@@ -112,7 +95,7 @@ pub async fn run_all(db: Arc<Database>) {
         };
 
         for v in mbc {
-            match db.bus_listings.upsert(&v) {
+            match db.bus_listings.upsert(&v).await {
                 Ok(_) => (),
                 Err(err) => {
                     eprintln!("{}", err);
@@ -120,10 +103,8 @@ pub async fn run_all(db: Arc<Database>) {
             }
         }
 
-        db.last_fetches.set(LastFetch::ModelsMbc).unwrap();
+        db.last_fetches.set(LastFetch::ModelsMbc).await.unwrap();
     }
-
-
 
     if bustimes::has_passed(last_fetches.models_ttcdiecast, TimeDelta::days(1)).unwrap() == true {
         println!("Scraping TTCDiecast");
@@ -136,7 +117,7 @@ pub async fn run_all(db: Arc<Database>) {
         };
 
         for v in ttcdiecast {
-            match db.bus_listings.upsert(&v) {
+            match db.bus_listings.upsert(&v).await {
                 Ok(_) => (),
                 Err(err) => {
                     eprintln!("{}", err);
@@ -145,6 +126,6 @@ pub async fn run_all(db: Arc<Database>) {
         }
 
 
-        db.last_fetches.set(LastFetch::ModelsTtcdiecast).unwrap();
+        db.last_fetches.set(LastFetch::ModelsTtcdiecast).await.unwrap();
     }
 }

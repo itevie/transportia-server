@@ -3,7 +3,7 @@ use axum::http::StatusCode;
 use axum::Json;
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
-use crate::db::resources::favourites::{Favourite, FavouriteFilled, FavouriteType};
+use crate::db::resource::favourite::favourite_def::{Favourite, FavouriteFilled, FavouriteType};
 use crate::extractors::authenticator::AuthUser;
 use crate::http::errors::ApiError;
 use crate::http::HttpState;
@@ -47,6 +47,7 @@ pub async fn get_favourites(
         .db
         .favourites
         .get_by_type(user_id, query.target_type)
+        .await
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 
     if query.fill_out.unwrap_or(false) {
@@ -54,6 +55,7 @@ pub async fn get_favourites(
             .db
             .favourites
             .fill(state.db.clone(), favourites, Some(user_id))
+            .await
             .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 
         return Ok(Json(
@@ -108,6 +110,7 @@ pub async fn get_favourites_by_group(
         .db
         .favourites
         .get_by_group_id(user_id, group_id)
+        .await
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 
     if query.fill_out.unwrap_or(false) {
@@ -115,6 +118,7 @@ pub async fn get_favourites_by_group(
             .db
             .favourites
             .fill(state.db.clone(), favourites, Some(user_id))
+            .await
             .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 
         return Ok(Json(
@@ -166,6 +170,7 @@ pub async fn get_favourite(
         .db
         .favourites
         .get(user_id, target_type, target_id)
+        .await
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 
     Ok(Json(favourite))

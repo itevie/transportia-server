@@ -1,6 +1,6 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 use serde::{Deserialize, Serialize};
-use crate::db::resources::user::User;
+use crate::db::resource::user::def::User;
 
 #[derive(Serialize, Deserialize)]
 pub struct JwtClaims {

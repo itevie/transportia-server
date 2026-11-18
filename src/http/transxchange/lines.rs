@@ -1,7 +1,8 @@
 use axum::extract::{Query, State};
 use axum::Json;
 use crate::db;
-use crate::db::tx_lines::TxLineQuery;
+use crate::db::resource::transxchange::line::TxLineQuery;
+use crate::db::resource::transxchange::line_def::TxLine;
 use crate::http::HttpState;
 
 #[utoipa::path(
@@ -14,7 +15,7 @@ use crate::http::HttpState;
         (
             status = 200,
             description = "Lines matching the search query",
-            body = [db::resources::tx_line::TxLine]
+            body = [TxLine]
         ),
         (
             status = 500,
@@ -25,11 +26,12 @@ use crate::http::HttpState;
 pub async fn search_lines(
     State(state): State<HttpState>,
     Query(query): Query<TxLineQuery>,
-) -> Result<Json<Vec<db::resources::tx_line::TxLine>>, String> {
+) -> Result<Json<Vec<TxLine>>, String> {
     let listings = state
         .db
         .tx_lines
         .search(&query)
+        .await
         .map_err(|err| err.to_string())?;
 
     Ok(Json(listings))

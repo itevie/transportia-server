@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use reqwest::Url;
 use scraper::{Html, Selector};
-use crate::db::resources::bus_listing::BusListingResource;
+use crate::db::resource::model_bus_listings::model_bus_listing_def::BusListingResource;
 use crate::fetchers::mbc::get_details;
 
 #[derive(Debug, Clone)]

@@ -3,6 +3,7 @@ use axum::Json;
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
 use crate::db;
+use crate::db::resource::bustimes::livery_def::BtLivery;
 use crate::http::HttpState;
 
 #[derive(Deserialize, ToSchema, IntoParams)]
@@ -20,7 +21,7 @@ pub struct LiverySearch {
         (
             status = 200,
             description = "Liveries matching the search query",
-            body = [db::resources::bt_livery::BtLivery]
+            body = [BtLivery]
         ),
         (
             status = 500,
@@ -31,11 +32,12 @@ pub struct LiverySearch {
 pub async fn search_liveries(
     State(state): State<HttpState>,
     Query(query): Query<LiverySearch>,
-) -> Result<Json<Vec<db::resources::bt_livery::BtLivery>>, String> {
+) -> Result<Json<Vec<BtLivery>>, String> {
     let listings = state
         .db
         .liveries
         .search(&query.query)
+        .await
         .map_err(|err| err.to_string())?;
 
     Ok(Json(listings))
@@ -53,7 +55,7 @@ pub async fn search_liveries(
         (
             status = 200,
             description = "Livery",
-            body = db::resources::bt_livery::BtLivery
+            body = BtLivery
         ),
         (
             status = 404,
@@ -68,11 +70,12 @@ pub async fn search_liveries(
 pub async fn get_livery(
     State(state): State<HttpState>,
     Path(id): Path<i64>,
-) -> Result<Json<db::resources::bt_livery::BtLivery>, String> {
+) -> Result<Json<BtLivery>, String> {
     let livery = state
         .db
         .liveries
         .get(id)
+        .await
         .map_err(|err| err.to_string())?
         .ok_or_else(|| "Livery not found".to_string())?;
 

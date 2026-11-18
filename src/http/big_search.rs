@@ -38,6 +38,7 @@ pub async fn big_search_route(
     Query(params): Query<BigSearchQuery>,
 ) -> Result<Json<BigSearchResult>, ApiError> {
     let results = big_search(state.db.clone(), params.query)
+        .await
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 
     Ok(Json(results))

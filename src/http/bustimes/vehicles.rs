@@ -6,7 +6,8 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use crate::auth::quick::is_trusted_user;
 use crate::db;
-use crate::db::vehicles::BtVehicles;
+use crate::db::resource::bustimes::vehicle::{BtVehicleQuery, BtVehicles};
+use crate::db::resource::bustimes::vehicle_def::FilledOutBtVehicle;
 use crate::extractors::authenticator::AuthUser;
 use crate::extractors::optional_authenticator::OptionalAuthUser;
 use crate::http::errors::ApiError;
@@ -17,12 +18,12 @@ use crate::http::HttpState;
     path = "/vehicles",
     tag = "Bustimes",
     summary = "Query vehicles",
-    params(db::vehicles::BtVehicleQuery),
+    params(BtVehicleQuery),
     responses(
         (
             status = 200,
             description = "Vehicles matching the search query",
-            body = [db::resources::bt_vehicle::FilledOutBtVehicle]
+            body = [FilledOutBtVehicle]
         ),
         (
             status = 500,
@@ -32,16 +33,19 @@ use crate::http::HttpState;
 )]
 pub async fn search_vehicles(
     State(state): State<HttpState>,
-    Query(query): Query<db::vehicles::BtVehicleQuery>,
+    Query(query): Query<BtVehicleQuery>,
     OptionalAuthUser(user): OptionalAuthUser,
-) -> Result<Json<Vec<db::resources::bt_vehicle::FilledOutBtVehicle>>, String> {
+) -> Result<Json<Vec<FilledOutBtVehicle>>, String> {
     let listings = state
         .db
         .vehicles
         .search(&query)
+        .await
         .map_err(|err| err.to_string())?;
     
-    let filled_out = BtVehicles::fill_out(state.db.clone(), listings, user.map(|x| x.user_id)).map_err(|err| err.to_string())?;
+    let filled_out = BtVehicles::fill_out(state.db.clone(), listings, user.map(|x| x.user_id))
+        .await
+        .map_err(|err| err.to_string())?;
 
     Ok(Json(filled_out))
 }
@@ -58,7 +62,7 @@ pub async fn search_vehicles(
         (
             status = 200,
             description = "Vehicle",
-            body = db::resources::bt_vehicle::FilledOutBtVehicle
+            body = FilledOutBtVehicle
         ),
         (
             status = 404,
@@ -74,11 +78,12 @@ pub async fn get_vehicle(
     State(state): State<HttpState>,
     Path(id): Path<i64>,
     OptionalAuthUser(user): OptionalAuthUser,
-) -> Result<Json<db::resources::bt_vehicle::FilledOutBtVehicle>, String> {
+) -> Result<Json<FilledOutBtVehicle>, String> {
     let vehicle = state
         .db
         .vehicles
         .get(id)
+        .await
         .map_err(|err| err.to_string())?
         .ok_or_else(|| "Vehicle not found".to_string())?;
 
@@ -87,6 +92,7 @@ pub async fn get_vehicle(
         vec![vehicle],
         user.map(|x| x.user_id)
     )
+        .await
         .map_err(|err| err.to_string())?
         .into_iter()
         .next()
@@ -143,12 +149,13 @@ pub async fn update_vehicle(
     AuthUser { user_id }: AuthUser,
     Json(body): Json<BtVehicleUpdateQuery>,
 ) -> Result<Response, ApiError> {
-    is_trusted_user(state.db.clone(), user_id)?;
+    is_trusted_user(state.db.clone(), user_id).await?;
 
     let mut vehicle = state
         .db
         .vehicles
         .get(id)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?
         .ok_or_else(|| ApiError::NotFound("Vehicle not found".to_string()))?;
 
@@ -168,6 +175,7 @@ pub async fn update_vehicle(
         .db
         .vehicles
         .upsert(&vehicle)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     Ok(StatusCode::NO_CONTENT.into_response())

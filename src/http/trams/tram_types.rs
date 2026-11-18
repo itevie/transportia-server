@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
 use crate::auth::quick::{is_admin, is_trusted_user};
-use crate::db::resources::tram_type::TramType;
+use crate::db::resource::tram::tram_type_def::TramType;
 use crate::extractors::authenticator::AuthUser;
 use crate::extractors::optional_authenticator::OptionalAuthUser;
 use crate::http::errors::ApiError;
@@ -60,6 +60,7 @@ pub async fn search_tram_types(
         .db
         .tram_types
         .search(query.query.as_deref().unwrap_or(""))
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     Ok(Json(tram_types))
@@ -98,6 +99,7 @@ pub async fn get_tram_type(
         .db
         .tram_types
         .get(id)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?
         .ok_or_else(|| {
             ApiError::NotFound("Tram type not found".to_string())
@@ -140,7 +142,7 @@ pub async fn create_tram_type(
     AuthUser { user_id }: AuthUser,
     Json(body): Json<TramTypeCreateRequest>,
 ) -> Result<Response, ApiError> {
-    is_trusted_user(state.db.clone(), user_id)?;
+    is_trusted_user(state.db.clone(), user_id).await?;
 
     let tram_type = TramType {
         id: 0,
@@ -151,6 +153,7 @@ pub async fn create_tram_type(
         .db
         .tram_types
         .create(&tram_type)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     Ok((
@@ -201,12 +204,13 @@ pub async fn update_tram_type(
     AuthUser { user_id }: AuthUser,
     Json(body): Json<TramTypeUpdateRequest>,
 ) -> Result<Response, ApiError> {
-    is_trusted_user(state.db.clone(), user_id)?;
+    is_trusted_user(state.db.clone(), user_id).await?;
 
     let mut tram_type = state
         .db
         .tram_types
         .get(id)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?
         .ok_or_else(|| {
             ApiError::NotFound("Tram type not found".to_string())
@@ -220,6 +224,7 @@ pub async fn update_tram_type(
         .db
         .tram_types
         .update(&tram_type)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     Ok(StatusCode::NO_CONTENT.into_response())
@@ -264,12 +269,13 @@ pub async fn delete_tram_type(
     Path(id): Path<i64>,
     AuthUser { user_id }: AuthUser,
 ) -> Result<Response, ApiError> {
-    is_admin(state.db.clone(), user_id)?;
+    is_admin(state.db.clone(), user_id).await?;
 
     state
         .db
         .tram_types
         .get(id)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?
         .ok_or_else(|| {
             ApiError::NotFound("Tram type not found".to_string())
@@ -279,6 +285,7 @@ pub async fn delete_tram_type(
         .db
         .tram_types
         .delete(id)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     Ok(StatusCode::NO_CONTENT.into_response())

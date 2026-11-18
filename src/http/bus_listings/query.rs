@@ -1,22 +1,20 @@
 use axum::extract::{Path, Query, State};
 use axum::Json;
-use crate::db;
-use crate::db::bus_listings::BusListingQuery;
-use crate::db::model_buses::{ModelBusQuery, ModelBuses};
-use crate::db::resources::bus_listing::BusListingResource;
-use crate::db::resources::model_bus::ModelBusFilledOut;
+use crate::db::resource::model_bus_listings::model_bus_listing::{BusListingQuery, BusListingQueryOptions};
+use crate::db::resource::model_bus_listings::model_bus_listing_def::BusListingResource;
 use crate::extractors::optional_authenticator::OptionalAuthUser;
 use crate::http::errors::ApiError;
 use crate::http::HttpState;
 
 pub async fn get_listings(
     State(state): State<HttpState>,
-    Query(query): Query<db::bus_listings::BusListingQuery>,
-) -> Result<Json<Vec<db::resources::bus_listing::BusListingResource>>, String> {
+    Query(query): Query<BusListingQuery>,
+) -> Result<Json<Vec<BusListingResource>>, String> {
     let listings = state
         .db
         .bus_listings
         .search(&query)
+        .await
         .map_err(|err| err.to_string())?;
 
     Ok(Json(listings))
@@ -24,11 +22,12 @@ pub async fn get_listings(
 
 pub async fn get_listing_options(
     State(state): State<HttpState>,
-) -> Result<Json<db::bus_listings::BusListingQueryOptions>, String> {
+) -> Result<Json<BusListingQueryOptions>, String> {
     let options = state
         .db
         .bus_listings
         .get_query_options()
+        .await
         .map_err(|err| err.to_string())?;
 
     Ok(Json(options))
@@ -75,6 +74,7 @@ pub async fn search_potential_listings_for_model(
             page_length: None,
             offset: None,
         })
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     Ok(Json(model_buses))

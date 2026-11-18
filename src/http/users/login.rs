@@ -34,12 +34,13 @@ pub async fn login(
         .db
         .users
         .get_by_email(&user.email, false)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?
     {
         return Err(ApiError::EmailDoesNotExist);
     }
 
-    let user = match state.db.users.check_password(&user.email, &user.password).map_err(|err| ApiError::Database(err.to_string()))? {
+    let user = match state.db.users.check_password(&user.email, &user.password).await.map_err(|err| ApiError::Database(err.to_string()))? {
         Some(user) => user,
         None => return Err(ApiError::UserNotFound)
     };

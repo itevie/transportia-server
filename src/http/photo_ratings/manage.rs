@@ -3,7 +3,7 @@ use axum::http::StatusCode;
 use axum::Json;
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
-use crate::db::resources::photo_rating::PhotoRating;
+use crate::db::resource::star_rating::star_rating_def::PhotoRating;
 use crate::extractors::authenticator::AuthUser;
 use crate::http::errors::ApiError;
 use crate::http::HttpState;
@@ -68,6 +68,7 @@ pub async fn rate_photo(
         .db
         .photo_ratings
         .get_by_user_and_photo(user_id, photo_id)
+        .await
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 
     let rating = PhotoRating {
@@ -83,12 +84,14 @@ pub async fn rate_photo(
             .db
             .photo_ratings
             .create(&rating)
+            .await
             .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
     } else {
         state
             .db
             .photo_ratings
             .upsert(&rating)
+            .await
             .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
     }
 
@@ -96,6 +99,7 @@ pub async fn rate_photo(
         .db
         .photo_ratings
         .average_rating(photo_id)
+        .await
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 
     Ok(Json(PhotoRatingResponse {
@@ -140,12 +144,14 @@ pub async fn delete_photo_rating(
         .db
         .photo_ratings
         .delete_by_user_and_photo(user_id, photo_id)
+        .await
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 
     let average_rating = state
         .db
         .photo_ratings
         .average_rating(photo_id)
+        .await
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 
     Ok(Json(PhotoRatingResponse {

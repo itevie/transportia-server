@@ -89,6 +89,7 @@ pub async fn get_photo_image(
         .db
         .photos
         .get(id)
+        .await
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?
         .ok_or_else(|| ApiError::NotFound("Photo not found".to_string()))?;
 

@@ -52,10 +52,11 @@ pub async fn create_route_checklist_item(
     AuthUser { user_id }: AuthUser,
     Path((checklist_id, line_id)): Path<(i64, String)>,
 ) -> Result<Response, ApiError> {
-    check_route_checklist(state.db.clone(), checklist_id, user_id)?;
+    check_route_checklist(state.db.clone(), checklist_id, user_id).await?;
 
 
     let line = state.db.tx_lines.get(line_id.as_str())
+        .await
         .map_err(|_e| ApiError::NotFound(line_id.to_string()))?;
     
     if let None = line {
@@ -72,6 +73,7 @@ pub async fn create_route_checklist_item(
             &line_id,
             &added_at,
         )
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     Ok(
@@ -125,9 +127,10 @@ pub async fn create_route_checklist_item_from_operators(
     AuthUser { user_id }: AuthUser,
     Path((checklist_id, operator_id)): Path<(i64, String)>,
 ) -> Result<Response, ApiError> {
-    check_route_checklist(state.db.clone(), checklist_id, user_id)?;
+    check_route_checklist(state.db.clone(), checklist_id, user_id).await?;
 
     let lines = state.db.tx_lines.get_by_national_operator_code(operator_id.as_str())
+        .await
         .map_err(|_e| ApiError::GenericServerError("Failed to fetch lines by operator".to_string()))?;
 
     let added_at = chrono::Utc::now().to_rfc3339();
@@ -141,6 +144,7 @@ pub async fn create_route_checklist_item_from_operators(
                 &line.tx_id,
                 &added_at,
             )
+            .await
             .map_err(|err| ApiError::Database(err.to_string()))?;
     }
 
@@ -199,7 +203,7 @@ pub async fn create_route_checklist_items_from_operators_bulk(
     Path(checklist_id): Path<i64>,
     Json(operator_ids): axum::Json<Vec<String>>,
 ) -> Result<Response, ApiError> {
-    check_route_checklist(state.db.clone(), checklist_id, user_id)?;
+    check_route_checklist(state.db.clone(), checklist_id, user_id).await?;
 
     let added_at = chrono::Utc::now().to_rfc3339();
 
@@ -208,6 +212,7 @@ pub async fn create_route_checklist_items_from_operators_bulk(
             .db
             .tx_lines
             .get_by_national_operator_code(&operator_id)
+            .await
             .map_err(|_| {
                 ApiError::GenericServerError(
                     format!("Failed to fetch lines for operator {operator_id}"),
@@ -223,6 +228,7 @@ pub async fn create_route_checklist_items_from_operators_bulk(
                     &line.tx_id,
                     &added_at,
                 )
+                .await
                 .map_err(|err| ApiError::Database(err.to_string()))?;
         }
     }
@@ -268,6 +274,7 @@ pub async fn count_lines_from_operators_bulk(
             .db
             .tx_lines
             .get_by_national_operator_code(&operator_id)
+            .await
             .map_err(|_| {
                 ApiError::GenericServerError(
                     format!("Failed to fetch lines for operator {operator_id}"),
@@ -325,12 +332,13 @@ pub async fn complete_route_checklist_item(
     AuthUser { user_id }: AuthUser,
     Path((checklist_id, item_id)): Path<(i64, i64)>,
 ) -> Result<Response, ApiError> {
-    check_route_checklist(state.db.clone(), checklist_id, user_id)?;
+    check_route_checklist(state.db.clone(), checklist_id, user_id).await?;
 
     let item = state
         .db
         .route_checklist_items
         .get(item_id)
+        .await
         .map_err(|e| ApiError::Database(e.to_string()))?
         .ok_or_else(|| ApiError::NotFound(item_id.to_string()))?;
 
@@ -340,6 +348,7 @@ pub async fn complete_route_checklist_item(
         .db
         .route_checklist_items
         .set_completed(item.id, if let Some(_) = item.completed_at { None } else { Some(&completed_at) })
+        .await
         .map_err(|e| ApiError::Database(e.to_string()))?;
 
     Ok(StatusCode::NO_CONTENT.into_response())

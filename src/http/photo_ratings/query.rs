@@ -41,12 +41,14 @@ pub async fn get_photo_rating(
         .db
         .photo_ratings
         .get_by_user_and_photo(user_id, photo_id)
+        .await
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 
     let average_rating = state
         .db
         .photo_ratings
         .average_rating(photo_id)
+        .await
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 
     Ok(Json(PhotoRatingResponse {

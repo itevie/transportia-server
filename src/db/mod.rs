@@ -1,77 +1,45 @@
-pub mod bus_listings;
-pub mod resources;
-pub mod users;
-pub mod liveries;
-pub mod last_fetches;
-pub mod vehicle_types;
-pub mod vehicles;
-pub mod tx_operators;
-pub mod tx_lines;
-pub mod photo;
-pub mod bus_photo_details;
-pub mod route_checklists;
-pub mod route_checklist_items;
-mod favourites;
-mod photo_ratings;
-pub mod tx_vehicle_journeys;
-pub mod tx_services;
-pub mod comment_threads;
-pub mod comments;
 pub mod big_search;
-pub mod favourites_groups;
-mod tram_operators;
-mod tram_types;
-mod tram_liveries;
-pub mod trams;
-pub mod model_buses;
 mod bustimes;
-pub mod model_bus_ownerships;
-pub mod tram_photo_details;
-pub mod tram_stops;
-mod tram_routes;
-pub mod tram_announcement_audios;
-mod model_bus_photo_details;
 mod util;
+pub mod macros;
+pub mod resource;
 
-use std::fs;
 use std::sync::Arc;
-use r2d2::Pool;
-use r2d2_sqlite::SqliteConnectionManager;
-use rusqlite::types::Value;
-use crate::db::bus_listings::{BusListings, SQL_BUS_LISTING};
-use crate::db::bus_photo_details::{BusPhotoDetailsManager, SQL_BUS_PHOTO_DETAILS};
-use crate::db::comment_threads::{CommentThreads, SQL_COMMENT_THREAD};
-use crate::db::comments::{Comments, SQL_COMMENT};
-use crate::db::favourites::{Favourites, SQL_FAVOURITE};
-use crate::db::favourites_groups::{FavouriteGroups, SQL_FAVOURITES_GROUPS};
-use crate::db::last_fetches::{LastFetchesDb, SQL_LAST_FETCHES};
-use crate::db::liveries::{BtLiveries, SQL_BT_LIVERY};
-use crate::db::model_bus_ownerships::{ModelBusOwnerships, SQL_MODEL_BUS_OWNERSHIPS};
-use crate::db::model_bus_photo_details::{ModelBusPhotoDetailsManager, SQL_MODEL_BUS_PHOTO_DETAILS};
-use crate::db::model_buses::{ModelBuses, SQL_MODEL_BUSES};
-use crate::db::photo::{Photos, SQL_PHOTOS};
-use crate::db::photo_ratings::{PhotoRatings, SQL_PHOTO_RATING};
-use crate::db::resources::tram_photo_details::TramPhotoDetails;
-use crate::db::resources::tram_type::TramType;
-use crate::db::route_checklist_items::{RouteChecklistItems, SQL_ROUTE_CHECKLIST_ITEMS};
-use crate::db::route_checklists::{RouteChecklists, SQL_ROUTE_CHECKLISTS};
-use crate::db::tram_announcement_audios::{TramAnnouncementAudios, SQL_TRAM_ANNOUNCEMENT_AUDIO};
-use crate::db::tram_liveries::{TramLiveries, SQL_TRAM_LIVERY};
-use crate::db::tram_operators::{TramOperators, SQL_TRAM_OPERATOR};
-use crate::db::tram_photo_details::{TramPhotoDetailsManager, SQL_TRAM_PHOTO_DETAILS};
-use crate::db::tram_types::{TramTypes, SQL_TRAM_TYPE};
-use crate::db::trams::{Trams, SQL_TRAM};
-use crate::db::tx_lines::{TxLines, SQL_TX_LINE};
-use crate::db::tx_operators::{TxOperators, SQL_TX_OPERATOR};
-use crate::db::tx_services::{TxServices, SQL_TX_SERVICE};
-use crate::db::tx_vehicle_journeys::{TxVehicleJourneys, SQL_TX_VEHICLE_JOURNEY};
-use crate::db::users::{Users, SQL_USER};
-use crate::db::vehicle_types::{BtVehicleTypes, SQL_BT_VEHICLE_TYPE};
-use crate::db::vehicles::{BtVehicles, SQL_BT_VEHICLE};
+
+use sqlx::{PgPool};
+use sqlx::postgres::PgPoolOptions;
+use crate::db::resource::bustimes::livery::{BtLiveries, SQL_BT_LIVERY};
+use crate::db::resource::bustimes::vehicle::{BtVehicles, SQL_BT_VEHICLE};
+use crate::db::resource::bustimes::vehicle_type::{BtVehicleTypes, SQL_BT_VEHICLE_TYPE};
+use crate::db::resource::checklist::checklist::{RouteChecklists, SQL_ROUTE_CHECKLISTS};
+use crate::db::resource::checklist::checklist_item::{RouteChecklistItems, SQL_ROUTE_CHECKLIST_ITEMS};
+use crate::db::resource::comment::comment::{Comments, SQL_COMMENT};
+use crate::db::resource::comment::comment_thread::{CommentThreads, SQL_COMMENT_THREAD};
+use crate::db::resource::favourite::favourite::{Favourites, SQL_FAVOURITE};
+use crate::db::resource::favourite::favourite_group::{FavouriteGroups, SQL_FAVOURITES_GROUPS};
+use crate::db::resource::last_fetch::last_fetch::{LastFetchesDb, SQL_LAST_FETCHES};
+use crate::db::resource::model_bus::model_bus::{ModelBuses, SQL_MODEL_BUSES};
+use crate::db::resource::model_bus::model_bus_ownership::{ModelBusOwnerships, SQL_MODEL_BUS_OWNERSHIPS};
+use crate::db::resource::model_bus_listings::model_bus_listing::{BusListings, SQL_BUS_LISTING};
+use crate::db::resource::photo::bus_photo_details::{BusPhotoDetailsManager, SQL_BUS_PHOTO_DETAILS};
+use crate::db::resource::photo::model_bus_photo_details::{ModelBusPhotoDetailsManager, SQL_MODEL_BUS_PHOTO_DETAILS};
+use crate::db::resource::photo::photo::{Photos, SQL_PHOTOS};
+use crate::db::resource::photo::tram_photo_details::{TramPhotoDetailsManager, SQL_TRAM_PHOTO_DETAILS};
+use crate::db::resource::star_rating::star_rating::{PhotoRatings, SQL_PHOTO_RATING};
+use crate::db::resource::tram::tram::{Trams, SQL_TRAM};
+use crate::db::resource::tram::tram_announcement_audio::{TramAnnouncementAudios, SQL_TRAM_ANNOUNCEMENT_AUDIO};
+use crate::db::resource::tram::tram_livery::{TramLiveries, SQL_TRAM_LIVERY};
+use crate::db::resource::tram::tram_operator::{TramOperators, SQL_TRAM_OPERATOR};
+use crate::db::resource::tram::tram_route::SQL_TRAM_ROUTE;
+use crate::db::resource::tram::tram_stop::SQL_TRAM_STOP;
+use crate::db::resource::tram::tram_type::{TramTypes, SQL_TRAM_TYPE};
+use crate::db::resource::transxchange::line::{TxLines, SQL_TX_LINE};
+use crate::db::resource::transxchange::operator::{TxOperators, SQL_TX_OPERATOR};
+use crate::db::resource::user::{Users, SQL_USER};
 
 #[derive(Clone)]
 pub struct Database {
-    pub pool: Pool<SqliteConnectionManager>,
+    pub pool: PgPool,
     pub bus_listings: BusListings,
     pub users: Users,
     pub last_fetches: LastFetchesDb,
@@ -86,8 +54,6 @@ pub struct Database {
     pub route_checklist_items: RouteChecklistItems,
     pub favourites: Favourites,
     pub photo_ratings: PhotoRatings,
-    pub tx_vehicle_journeys: TxVehicleJourneys,
-    pub tx_services: TxServices,
     pub comment_threads: CommentThreads,
     pub comments: Comments,
     pub favourites_groups: FavouriteGroups,
@@ -99,56 +65,66 @@ pub struct Database {
     pub model_bus_ownerships: ModelBusOwnerships,
     pub tram_photo_details: TramPhotoDetailsManager,
     pub tram_announcement_audios: TramAnnouncementAudios,
-    pub model_bus_photo_details: ModelBusPhotoDetailsManager
+    pub model_bus_photo_details: ModelBusPhotoDetailsManager,
 }
 
-macro_rules! execute_sql {
-    ($connection:expr, $sql:ident) => {
-        $connection.execute($sql, [])
-            .map_err(|e| format!("Error with {}: {}", stringify!($sql), e))?;
-    };
-}
+pub async fn init_db() -> Result<Database, Box<dyn std::error::Error>> {
+    let database_url = std::env::var("DATABASE_URL")?;
 
-pub fn init_db() -> Result<Database, Box<dyn std::error::Error>> {
-    fs::create_dir_all("./data")
-        .expect("Failed to create data directory");
+    let pool = PgPoolOptions::new()
+        .max_connections(10)
+        .connect(&database_url)
+        .await?;
 
-    let manager = SqliteConnectionManager::file("./data/transportia.db");
-
-    let pool = Pool::new(manager)?;
-
-    {
-        let connection = pool.get()?;
-
-        execute_sql!(connection, SQL_BUS_LISTING);
-        execute_sql!(connection, SQL_USER);
-        execute_sql!(connection, SQL_LAST_FETCHES);
-        execute_sql!(connection, SQL_BT_LIVERY);
-        execute_sql!(connection, SQL_BT_VEHICLE_TYPE);
-        execute_sql!(connection, SQL_BT_VEHICLE);
-        execute_sql!(connection, SQL_TX_LINE);
-        execute_sql!(connection, SQL_TX_OPERATOR);
-        execute_sql!(connection, SQL_PHOTOS);
-        execute_sql!(connection, SQL_BUS_PHOTO_DETAILS);
-        execute_sql!(connection, SQL_ROUTE_CHECKLISTS);
-        execute_sql!(connection, SQL_ROUTE_CHECKLIST_ITEMS);
-        execute_sql!(connection, SQL_FAVOURITE);
-        execute_sql!(connection, SQL_PHOTO_RATING);
-        execute_sql!(connection, SQL_TX_VEHICLE_JOURNEY);
-        execute_sql!(connection, SQL_TX_SERVICE);
-        execute_sql!(connection, SQL_COMMENT_THREAD);
-        execute_sql!(connection, SQL_COMMENT);
-        execute_sql!(connection, SQL_FAVOURITES_GROUPS);
-        execute_sql!(connection, SQL_TRAM);
-        execute_sql!(connection, SQL_TRAM_LIVERY);
-        execute_sql!(connection, SQL_TRAM_TYPE);
-        execute_sql!(connection, SQL_TRAM_OPERATOR);
-        execute_sql!(connection, SQL_MODEL_BUSES);
-        execute_sql!(connection, SQL_MODEL_BUS_OWNERSHIPS);
-        execute_sql!(connection, SQL_TRAM_PHOTO_DETAILS);
-        execute_sql!(connection, SQL_TRAM_ANNOUNCEMENT_AUDIO);
-        execute_sql!(connection, SQL_MODEL_BUS_PHOTO_DETAILS);
+    macro_rules! execute_sql {
+        ($sql:ident) => {
+            sqlx::query($sql)
+                .execute(&pool)
+                .await
+                .map_err(|e| {
+                    format!("Error with {}: {}", stringify!($sql), e)
+                })?;
+        };
     }
+
+    // Create tables in dependency order.
+    execute_sql!(SQL_COMMENT_THREAD);
+
+    execute_sql!(SQL_USER);
+    execute_sql!(SQL_BUS_LISTING);
+    execute_sql!(SQL_LAST_FETCHES);
+
+    execute_sql!(SQL_BT_LIVERY);
+    execute_sql!(SQL_BT_VEHICLE_TYPE);
+    execute_sql!(SQL_BT_VEHICLE);
+
+    execute_sql!(SQL_TX_OPERATOR);
+    execute_sql!(SQL_TX_LINE);
+
+    execute_sql!(SQL_PHOTOS);
+    execute_sql!(SQL_BUS_PHOTO_DETAILS);
+
+    execute_sql!(SQL_ROUTE_CHECKLISTS);
+    execute_sql!(SQL_ROUTE_CHECKLIST_ITEMS);
+
+    execute_sql!(SQL_FAVOURITES_GROUPS);
+    execute_sql!(SQL_FAVOURITE);
+    execute_sql!(SQL_PHOTO_RATING);
+
+    execute_sql!(SQL_COMMENT);
+
+    execute_sql!(SQL_TRAM_LIVERY);
+    execute_sql!(SQL_TRAM_TYPE);
+    execute_sql!(SQL_TRAM_OPERATOR);
+    execute_sql!(SQL_TRAM);
+    execute_sql!(SQL_TRAM_PHOTO_DETAILS);
+    execute_sql!(SQL_TRAM_STOP);
+    execute_sql!(SQL_TRAM_ROUTE);
+    execute_sql!(SQL_TRAM_ANNOUNCEMENT_AUDIO);
+
+    execute_sql!(SQL_MODEL_BUSES);
+    execute_sql!(SQL_MODEL_BUS_OWNERSHIPS);
+    execute_sql!(SQL_MODEL_BUS_PHOTO_DETAILS);
 
     let db = Database {
         pool: pool.clone(),
@@ -166,8 +142,6 @@ pub fn init_db() -> Result<Database, Box<dyn std::error::Error>> {
         route_checklist_items: RouteChecklistItems::new(pool.clone()),
         favourites: Favourites::new(pool.clone()),
         photo_ratings: PhotoRatings::new(pool.clone()),
-        tx_vehicle_journeys: TxVehicleJourneys::new(pool.clone()),
-        tx_services: TxServices::new(pool.clone()),
         comment_threads: CommentThreads::new(pool.clone()),
         comments: Comments::new(pool.clone()),
         favourites_groups: FavouriteGroups::new(pool.clone()),
@@ -185,64 +159,127 @@ pub fn init_db() -> Result<Database, Box<dyn std::error::Error>> {
     Ok(db)
 }
 
-pub fn create_missing_comment_threads(
+
+
+pub async fn create_missing_comment_threads(
     db: Arc<Database>,
     table_name: &str,
-) -> rusqlite::Result<usize> {
-    const ALLOWED_TABLES: &[&str] = &[
-        "tx_operators",
-        "photos",
-        "tx_routes",
-        "bt_vehicles",
-    ];
+) -> Result<(), sqlx::Error> {
+    let mut tx = db.pool.begin().await?;
 
-    if !ALLOWED_TABLES.contains(&table_name) {
-        return Err(rusqlite::Error::InvalidParameterName(
-            table_name.to_string(),
-        ));
-    }
+    println!("Ensuring comment threads for {}", table_name);
 
-    let mut connection = db.pool.get().map_err(|err| {
-        rusqlite::Error::ToSqlConversionFailure(Box::new(err))
-    })?;
-
-    let tx = connection.transaction()?;
-
-    let sql = format!(
-        r#"SELECT id FROM "{table_name}" WHERE comment_thread IS NULL"#
-    );
-
-    let ids: Vec<Value> = {
-        let mut statement = tx.prepare(&sql)?;
-        let rows = statement.query_map([], |row| row.get(0))?;
-        rows.collect::<rusqlite::Result<Vec<Value>>>()?
+    let query = match table_name {
+        "tx_operators" => {
+            r#"
+            WITH missing AS (
+                SELECT
+                    id,
+                    nextval(pg_get_serial_sequence('comment_threads', 'id')) AS thread_id
+                FROM tx_operators
+                WHERE comment_thread IS NULL
+            ),
+            inserted AS (
+                INSERT INTO comment_threads (id, created_at)
+                SELECT thread_id, NOW()::TEXT
+                FROM missing
+                RETURNING id
+            )
+            UPDATE tx_operators AS t
+            SET comment_thread = m.thread_id
+            FROM missing AS m
+            JOIN inserted AS i ON i.id = m.thread_id
+            WHERE t.id = m.id
+              AND t.comment_thread IS NULL
+            "#
+        }
+        "photos" => {
+            r#"
+            WITH missing AS (
+                SELECT
+                    id,
+                    nextval(pg_get_serial_sequence('comment_threads', 'id')) AS thread_id
+                FROM photos
+                WHERE comment_thread IS NULL
+            ),
+            inserted AS (
+                INSERT INTO comment_threads (id, created_at)
+                SELECT thread_id, NOW()::TEXT
+                FROM missing
+                RETURNING id
+            )
+            UPDATE photos AS t
+            SET comment_thread = m.thread_id
+            FROM missing AS m
+            JOIN inserted AS i ON i.id = m.thread_id
+            WHERE t.id = m.id
+              AND t.comment_thread IS NULL
+            "#
+        }
+        "tx_routes" => {
+            r#"
+            WITH missing AS (
+                SELECT
+                    id,
+                    nextval(pg_get_serial_sequence('comment_threads', 'id')) AS thread_id
+                FROM tx_routes
+                WHERE comment_thread IS NULL
+            ),
+            inserted AS (
+                INSERT INTO comment_threads (id, created_at)
+                SELECT thread_id, NOW()::TEXT
+                FROM missing
+                RETURNING id
+            )
+            UPDATE tx_routes AS t
+            SET comment_thread = m.thread_id
+            FROM missing AS m
+            JOIN inserted AS i ON i.id = m.thread_id
+            WHERE t.id = m.id
+              AND t.comment_thread IS NULL
+            "#
+        }
+        "bt_vehicles" => {
+            r#"
+            WITH missing AS (
+                SELECT
+                    id,
+                    nextval(pg_get_serial_sequence('comment_threads', 'id')) AS thread_id
+                FROM bt_vehicles
+                WHERE comment_thread IS NULL
+            ),
+            inserted AS (
+                INSERT INTO comment_threads (id, created_at)
+                SELECT thread_id, NOW()::TEXT
+                FROM missing
+                RETURNING id
+            )
+            UPDATE bt_vehicles AS t
+            SET comment_thread = m.thread_id
+            FROM missing AS m
+            JOIN inserted AS i ON i.id = m.thread_id
+            WHERE t.id = m.id
+              AND t.comment_thread IS NULL
+            "#
+        }
+        _ => {
+            return Err(sqlx::Error::Protocol(format!(
+                "Invalid table name: {table_name}"
+            )));
+        }
     };
 
-    let mut created = 0;
+    let result = sqlx::query(query)
+        .execute(&mut *tx)
+        .await?;
 
-    for id in ids {
-        let now = chrono::Utc::now().to_rfc3339();
+    println!(
+        "Created {} comment threads for {}",
+        result.rows_affected(),
+        table_name
+    );
 
-        tx.execute(
-            "INSERT INTO comment_threads (created_at) VALUES (?1)",
-            [&now],
-        )?;
+    tx.commit().await?;
 
-        let thread_id = tx.last_insert_rowid();
-
-        let sql = format!(
-            r#"UPDATE "{table_name}"
-               SET comment_thread = ?1
-               WHERE id = ?2 AND comment_thread IS NULL"#
-        );
-
-        created += tx.execute(
-            &sql,
-            rusqlite::params![thread_id, id],
-        )?;
-    }
-
-    tx.commit()?;
-
-    Ok(created)
+    Ok(())
 }

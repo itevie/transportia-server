@@ -6,10 +6,10 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use tokio::time::sleep;
 use crate::db::Database;
-use crate::db::last_fetches::LastFetch;
-use crate::db::resources::bt_livery::BtLivery;
-use crate::db::resources::bt_vehicle::BtVehicle;
-use crate::db::resources::bt_vehicle_type::BtVehicleType;
+use crate::db::resource::bustimes::livery_def::BtLivery;
+use crate::db::resource::bustimes::vehicle_def::BtVehicle;
+use crate::db::resource::bustimes::vehicle_type_def::BtVehicleType;
+use crate::db::resource::last_fetch::last_fetch::LastFetch;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[derive(Default)]
@@ -43,7 +43,7 @@ pub struct BtVehicleResponse {
 pub async fn fetch_bustimes_resources(db: Arc<Database>) -> Result<(), Box<dyn std::error::Error>> {
     let client = Client::new();
 
-    let last_fetches = db.last_fetches.get()?;
+    let last_fetches = db.last_fetches.get().await?;
 
     if has_passed(last_fetches.bt_liveries, TimeDelta::days(1))? == true {
         let liveries = fetch_all_pages::<BtLivery>(
@@ -52,10 +52,10 @@ pub async fn fetch_bustimes_resources(db: Arc<Database>) -> Result<(), Box<dyn s
         ).await?;
 
         for livery in liveries {
-            db.liveries.upsert(&livery)?;
+            db.liveries.upsert(&livery).await?;
         }
 
-        db.last_fetches.set(LastFetch::BtLiveries)?;
+        db.last_fetches.set(LastFetch::BtLiveries).await?;
     }
 
     if has_passed(last_fetches.bt_vehicle_types, TimeDelta::days(1))? == true {
@@ -65,10 +65,10 @@ pub async fn fetch_bustimes_resources(db: Arc<Database>) -> Result<(), Box<dyn s
         ).await?;
 
         for vt in vehicle_types {
-            db.vehicle_types.upsert(&vt)?;
+            db.vehicle_types.upsert(&vt).await?;
         }
 
-        db.last_fetches.set(LastFetch::BtVehicleTypes)?;
+        db.last_fetches.set(LastFetch::BtVehicleTypes).await?;
     }
 
     if has_passed(last_fetches.bt_vehicles, TimeDelta::days(3))? == true {
@@ -98,10 +98,10 @@ pub async fn fetch_bustimes_resources(db: Arc<Database>) -> Result<(), Box<dyn s
                 demonstrator: false,
                 open_top: false,
                 comment_thread: None
-            })?;
+            }).await?;
         }
 
-        db.last_fetches.set(LastFetch::BtVehicles)?;
+        db.last_fetches.set(LastFetch::BtVehicles).await?;
     }
 
     Ok(())

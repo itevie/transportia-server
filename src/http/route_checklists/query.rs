@@ -3,10 +3,10 @@ use axum::http::StatusCode;
 use axum::Json;
 use axum::response::{IntoResponse, Response};
 use crate::auth::quick::check_route_checklist;
-use crate::db::resources::route_checklist::RouteChecklist;
-use crate::db::resources::route_checklist_item::RouteChecklistItem;
-use crate::db::route_checklist_items::RouteChecklistItems;
-use crate::db::route_checklists::RouteChecklists;
+use crate::db::resource::checklist::checklist::RouteChecklists;
+use crate::db::resource::checklist::checklist_def::RouteChecklist;
+use crate::db::resource::checklist::checklist_item::RouteChecklistItems;
+use crate::db::resource::checklist::checklist_item_def::RouteChecklistItem;
 use crate::extractors::authenticator::AuthUser;
 use crate::http::errors::ApiError;
 use crate::http::HttpState;
@@ -34,9 +34,10 @@ pub async fn get_route_checklist(
     Path(id): Path<i64>,
     AuthUser { user_id }: AuthUser
 ) -> Result<Response, ApiError> {
-    let item = check_route_checklist(state.db.clone(), id, user_id)?;
+    let item = check_route_checklist(state.db.clone(), id, user_id).await?;
 
     let filled_out = RouteChecklists::fill_out(state.db.clone(), vec![item])
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     Ok((StatusCode::OK, Json(filled_out[0].clone())).into_response())
@@ -65,15 +66,17 @@ pub async fn get_route_checklist_items(
     Path(id): Path<i64>,
     AuthUser { user_id }: AuthUser,
 ) -> Result<Response, ApiError> {
-    check_route_checklist(state.db.clone(), id, user_id)?;
+    check_route_checklist(state.db.clone(), id, user_id).await?;
 
     let items = state
         .db
         .route_checklist_items
         .get_by_checklist(id)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     let filled_out = RouteChecklistItems::fill_out(state.db.clone(), items)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     Ok((StatusCode::OK, Json(filled_out)).into_response())
@@ -100,9 +103,11 @@ pub async fn get_route_checklists(
         .db
         .route_checklists
         .get_by_owner(user_id)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     let filled_out = RouteChecklists::fill_out(state.db.clone(), items)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     Ok((StatusCode::OK, Json(filled_out)).into_response())

@@ -36,6 +36,7 @@ pub async fn register(
         .db
         .users
         .get_by_email(&user.email, false)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?
     {
         return Err(ApiError::EmailExists);
@@ -45,6 +46,7 @@ pub async fn register(
         .db
         .users
         .get_by_username(&user.username)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?
     {
         return Err(ApiError::UsernameExists);
@@ -58,6 +60,7 @@ pub async fn register(
         .db
         .users
         .create(&user.email, &user.username, &user.password)
+        .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     Ok((StatusCode::CREATED, "User created").into_response())

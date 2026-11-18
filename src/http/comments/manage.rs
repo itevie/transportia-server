@@ -4,8 +4,8 @@ use axum::Json;
 use chrono::Utc;
 use serde::Deserialize;
 use utoipa::ToSchema;
-use crate::db::comments::Comments;
-use crate::db::resources::comments::{Comment, CommentFilledOut};
+use crate::db::resource::comment::comment::Comments;
+use crate::db::resource::comment::comment_def::CommentFilledOut;
 use crate::extractors::authenticator::AuthUser;
 use crate::http::errors::ApiError;
 use crate::http::HttpState;
@@ -54,6 +54,7 @@ pub async fn create_comment(
             .db
             .comments
             .get(parent_id)
+            .await
             .map_err(|err| ApiError::GenericServerError(err.to_string()))?
             .ok_or_else(|| ApiError::GenericServerError("Can't find parent comment id".to_string()))?;
 
@@ -73,9 +74,11 @@ pub async fn create_comment(
             request.body.trim(),
             request.parent_comment_id,
         )
+        .await
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 
     let filled_out = Comments::fill_out(state.db.clone(), comment, Some(user_id))
+        .await
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 
     Ok((StatusCode::CREATED, Json(filled_out)))
@@ -114,6 +117,7 @@ pub async fn update_comment(
         .db
         .comments
         .get(id)
+        .await
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?
         .ok_or_else(|| ApiError::GenericServerError("Can't find parent comment id".to_string()))?;;
 
@@ -131,6 +135,7 @@ pub async fn update_comment(
         .db
         .comments
         .update(&comment)
+        .await
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 
     Ok(StatusCode::NO_CONTENT)
@@ -161,6 +166,7 @@ pub async fn delete_comment(
         .db
         .comments
         .get(id)
+        .await
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?
         .ok_or_else(|| ApiError::GenericServerError("Can't find parent comment id".to_string()))?;
 
@@ -174,6 +180,7 @@ pub async fn delete_comment(
         .db
         .comments
         .delete(id)
+        .await
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 
     Ok(StatusCode::NO_CONTENT)

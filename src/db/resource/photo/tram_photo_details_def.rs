@@ -1,10 +1,10 @@
-use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
-use utoipa::ToSchema;
 use crate::db::resource::tram::tram_def::TramFilledOut;
 use crate::db::resource::tram::tram_livery_def::TramLivery;
 use crate::db::resource::tram::tram_operator_def::TramOperator;
 use crate::db::resource::tram::tram_type_def::TramType;
+use serde::{Deserialize, Serialize};
+use sqlx::FromRow;
+use utoipa::ToSchema;
 
 // TODO: Add head sign to this, e.g. Eccles
 // TODO: And also add the tram route

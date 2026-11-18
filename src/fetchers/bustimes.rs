@@ -1,26 +1,24 @@
-use std::sync::Arc;
-use std::time::Duration;
-use chrono::{DateTime, TimeDelta, Utc};
-use reqwest::Client;
-use serde::de::DeserializeOwned;
-use serde::{Deserialize, Serialize};
-use tokio::time::sleep;
 use crate::db::Database;
 use crate::db::resource::bustimes::livery_def::BtLivery;
 use crate::db::resource::bustimes::vehicle_def::BtVehicle;
 use crate::db::resource::bustimes::vehicle_type_def::BtVehicleType;
 use crate::db::resource::last_fetch::last_fetch::LastFetch;
+use chrono::{DateTime, TimeDelta, Utc};
+use reqwest::Client;
+use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+use std::time::Duration;
+use tokio::time::sleep;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct BtVehicleResponseWithId {
-    pub id: Option<i64>
+    pub id: Option<i64>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct BtVehicleResponseWithIdString {
-    pub id: Option<String>
+    pub id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -46,10 +44,9 @@ pub async fn fetch_bustimes_resources(db: Arc<Database>) -> Result<(), Box<dyn s
     let last_fetches = db.last_fetches.get().await?;
 
     if has_passed(last_fetches.bt_liveries, TimeDelta::days(1))? == true {
-        let liveries = fetch_all_pages::<BtLivery>(
-            &client,
-            "https://bustimes.org/api/liveries?limit=10000",
-        ).await?;
+        let liveries =
+            fetch_all_pages::<BtLivery>(&client, "https://bustimes.org/api/liveries?limit=10000")
+                .await?;
 
         for livery in liveries {
             db.liveries.upsert(&livery).await?;
@@ -62,7 +59,8 @@ pub async fn fetch_bustimes_resources(db: Arc<Database>) -> Result<(), Box<dyn s
         let vehicle_types = fetch_all_pages::<BtVehicleType>(
             &client,
             "https://bustimes.org/api/vehicletypes?limit=10000",
-        ).await?;
+        )
+        .await?;
 
         for vt in vehicle_types {
             db.vehicle_types.upsert(&vt).await?;
@@ -75,30 +73,34 @@ pub async fn fetch_bustimes_resources(db: Arc<Database>) -> Result<(), Box<dyn s
         let vehicles = fetch_all_pages::<BtVehicleResponse>(
             &client,
             "https://bustimes.org/api/vehicles?limit=1000",
-        ).await?;
+        )
+        .await?;
 
         for v in vehicles {
-            db.vehicles.upsert_bustimes(&BtVehicle {
-                id: v.id,
-                slug: v.slug,
-                fleet: v.fleet_code,
-                reg: v.reg,
-                previous_reg: v.previous_reg,
-                vehicle_type_id: v.vehicle_type.and_then(|x| x.id),
-                livery_id: v.livery.and_then(|x| x.id),
-                branding: v.branding,
-                operator_id: v.operator
-                    .and_then(|operator| operator.id)
-                    .unwrap_or_default(),
-                garage_id: None,
-                name: v.name,
-                notes: v.notes,
-                withdrawn: v.withdrawn,
-                training_vehicle: false,
-                demonstrator: false,
-                open_top: false,
-                comment_thread: None
-            }).await?;
+            db.vehicles
+                .upsert_bustimes(&BtVehicle {
+                    id: v.id,
+                    slug: v.slug,
+                    fleet: v.fleet_code,
+                    reg: v.reg,
+                    previous_reg: v.previous_reg,
+                    vehicle_type_id: v.vehicle_type.and_then(|x| x.id),
+                    livery_id: v.livery.and_then(|x| x.id),
+                    branding: v.branding,
+                    operator_id: v
+                        .operator
+                        .and_then(|operator| operator.id)
+                        .unwrap_or_default(),
+                    garage_id: None,
+                    name: v.name,
+                    notes: v.notes,
+                    withdrawn: v.withdrawn,
+                    training_vehicle: false,
+                    demonstrator: false,
+                    open_top: false,
+                    comment_thread: None,
+                })
+                .await?;
         }
 
         db.last_fetches.set(LastFetch::BtVehicles).await?;
@@ -115,10 +117,7 @@ struct ApiPage<T> {
     results: Vec<T>,
 }
 
-pub async fn fetch_all_pages<T>(
-    client: &Client,
-    url: &str,
-) -> Result<Vec<T>, reqwest::Error>
+pub async fn fetch_all_pages<T>(client: &Client, url: &str) -> Result<Vec<T>, reqwest::Error>
 where
     T: DeserializeOwned,
 {
@@ -135,7 +134,6 @@ where
             .error_for_status()?
             .json()
             .await?;
-
 
         results.extend(page.results);
         url = page.next;

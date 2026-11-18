@@ -1,15 +1,15 @@
 use std::path::PathBuf;
 
+use crate::http::HttpState;
+use crate::http::errors::ApiError;
 use axum::extract::{Path, Query, State};
-use axum::http::{header, StatusCode};
+use axum::http::{StatusCode, header};
 use axum::response::Response;
 use exif::{In, Tag};
 use image::imageops::FilterType;
 use image::metadata::Orientation;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
-use crate::http::errors::ApiError;
-use crate::http::HttpState;
 
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
 pub struct PhotoImageQuery {
@@ -21,10 +21,7 @@ fn image_response(bytes: Vec<u8>) -> Response {
     Response::builder()
         .status(StatusCode::OK)
         .header(header::CONTENT_TYPE, "image/jpeg")
-        .header(
-            header::CACHE_CONTROL,
-            "public, max-age=31536000, immutable",
-        )
+        .header(header::CACHE_CONTROL, "public, max-age=31536000, immutable")
         .body(bytes.into())
         .unwrap()
 }
@@ -95,10 +92,7 @@ pub async fn get_photo_image(
 
     // Requests without dimensions return the original image.
     if width.is_none() && height.is_none() {
-        let url = format!(
-            "https://transportia-cdn.dawn.rest/{}",
-            photo.uploaded_id
-        );
+        let url = format!("https://transportia-cdn.dawn.rest/{}", photo.uploaded_id);
 
         let response = reqwest::get(&url)
             .await
@@ -138,10 +132,7 @@ pub async fn get_photo_image(
     }
 
     // Cache miss: fetch the original image.
-    let url = format!(
-        "https://transportia-cdn.dawn.rest/{}",
-        photo.uploaded_id
-    );
+    let url = format!("https://transportia-cdn.dawn.rest/{}", photo.uploaded_id);
 
     let response = reqwest::get(&url)
         .await
@@ -159,9 +150,7 @@ pub async fn get_photo_image(
         .await
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 
-    let mut image = image::ImageReader::new(
-        std::io::Cursor::new(&bytes),
-    )
+    let mut image = image::ImageReader::new(std::io::Cursor::new(&bytes))
         .with_guessed_format()
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?
         .decode()
@@ -171,9 +160,7 @@ pub async fn get_photo_image(
     let orientation = {
         let mut cursor = std::io::Cursor::new(&bytes);
 
-        let exif = exif::Reader::new()
-            .read_from_container(&mut cursor)
-            .ok();
+        let exif = exif::Reader::new().read_from_container(&mut cursor).ok();
 
         match exif
             .as_ref()
@@ -206,9 +193,7 @@ pub async fn get_photo_image(
         )
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 
-    tokio::fs::create_dir_all(
-        cache_path.parent().unwrap(),
-    )
+    tokio::fs::create_dir_all(cache_path.parent().unwrap())
         .await
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 

@@ -1,3 +1,3 @@
 mod api;
-pub mod siri_vm;
 pub mod datafeed;
+pub mod siri_vm;

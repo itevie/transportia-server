@@ -1,13 +1,13 @@
-use axum::extract::{Path, Query, State};
-use axum::http::StatusCode;
-use axum::Json;
-use axum::response::{IntoResponse, Response};
 use crate::db;
-use crate::db::resource::user::def::User;
 use crate::db::resource::user::UserQuery;
+use crate::db::resource::user::def::User;
 use crate::extractors::authenticator::AuthUser;
 use crate::http::HttpState;
 use crate::http::errors::ApiError;
+use axum::Json;
+use axum::extract::{Path, Query, State};
+use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
 
 #[utoipa::path(
     get,
@@ -55,7 +55,7 @@ pub async fn get_user(
 )]
 pub async fn me(
     State(state): State<HttpState>,
-    AuthUser { user_id }: AuthUser
+    AuthUser { user_id }: AuthUser,
 ) -> Result<Response, ApiError> {
     let user = state
         .db
@@ -64,7 +64,7 @@ pub async fn me(
         .await
         .map_err(|err| ApiError::Database(err.to_string()))?
         .ok_or(ApiError::UserNotFound)?;
-    
+
     Ok((StatusCode::OK, Json(user)).into_response())
 }
 

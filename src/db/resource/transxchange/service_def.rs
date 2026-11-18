@@ -22,5 +22,5 @@ pub struct TxService {
     pub special_days_of_non_operation: String,
     pub serviced_organisation_refs: String,
 
-    pub operator: Option<String>
+    pub operator: Option<String>,
 }

@@ -1,8 +1,7 @@
-
-use serde::{Deserialize, Serialize};
-use sqlx::{PgPool, QueryBuilder, Postgres};
 use crate::db::resource::model_bus_listings::model_bus_listing_def::BusListingResource;
 use crate::{filter_ilike, filter_search};
+use serde::{Deserialize, Serialize};
+use sqlx::{PgPool, Postgres, QueryBuilder};
 
 pub static SQL_BUS_LISTING: &str = r#"
 CREATE TABLE IF NOT EXISTS bus_listings (
@@ -75,12 +74,8 @@ impl BusListings {
         Self { pool }
     }
 
-    pub async fn fetch(
-        &self,
-    ) -> Result<Vec<BusListingResource>, sqlx::Error> {
-        sqlx::query_as::<_, BusListingResource>(
-            "SELECT * FROM bus_listings",
-        )
+    pub async fn fetch(&self) -> Result<Vec<BusListingResource>, sqlx::Error> {
+        sqlx::query_as::<_, BusListingResource>("SELECT * FROM bus_listings")
             .fetch_all(&self.pool)
             .await
     }
@@ -91,34 +86,15 @@ impl BusListings {
     ) -> Result<Vec<BusListingResource>, sqlx::Error> {
         let page_length = query.page_length.unwrap_or(50).min(1000);
 
-        let mut builder = QueryBuilder::<Postgres>::new(
-            "SELECT * FROM bus_listings WHERE 1 = 1",
-        );
+        let mut builder = QueryBuilder::<Postgres>::new("SELECT * FROM bus_listings WHERE 1 = 1");
 
-        filter_ilike!(
-            builder,
-            "scale",
-            query.scale.as_deref()
-        );
+        filter_ilike!(builder, "scale", query.scale.as_deref());
 
-        filter_ilike!(
-            builder,
-            "origin_code",
-            query.origin.as_deref()
-        );
+        filter_ilike!(builder, "origin_code", query.origin.as_deref());
 
-        filter_ilike!(
-            builder,
-            "title",
-            query.title.as_deref()
-        );
-        
+        filter_ilike!(builder, "title", query.title.as_deref());
 
-        filter_ilike!(
-            builder,
-            "manufacturer",
-            query.manufacturer.as_deref()
-        );
+        filter_ilike!(builder, "manufacturer", query.manufacturer.as_deref());
 
         filter_ilike!(
             builder,
@@ -126,31 +102,19 @@ impl BusListings {
             query.manufacturer_code.as_deref()
         );
 
-        filter_ilike!(
-            builder,
-            "condition",
-            query.condition.as_deref()
-        );
+        filter_ilike!(builder, "condition", query.condition.as_deref());
 
-        filter_ilike!(
-            builder,
-            "category",
-            query.category.as_deref()
-        );
+        filter_ilike!(builder, "category", query.category.as_deref());
 
         if let Some(value) = &query.price_low {
             if let Ok(value) = value.parse::<f64>() {
-                builder
-                    .push(" AND price_low >= ")
-                    .push_bind(value);
+                builder.push(" AND price_low >= ").push_bind(value);
             }
         }
 
         if let Some(value) = &query.price_high {
             if let Ok(value) = value.parse::<f64>() {
-                builder
-                    .push(" AND price_high <= ")
-                    .push_bind(value);
+                builder.push(" AND price_high <= ").push_bind(value);
             }
         }
 
@@ -181,14 +145,10 @@ impl BusListings {
             _ => {}
         }
 
-        builder
-            .push(" LIMIT ")
-            .push_bind(page_length);
+        builder.push(" LIMIT ").push_bind(page_length);
 
         if let Some(offset) = query.offset {
-            builder
-                .push(" OFFSET ")
-                .push_bind(offset);
+            builder.push(" OFFSET ").push_bind(offset);
         }
 
         builder
@@ -197,9 +157,7 @@ impl BusListings {
             .await
     }
 
-    pub async fn get_query_options(
-        &self,
-    ) -> Result<BusListingQueryOptions, sqlx::Error> {
+    pub async fn get_query_options(&self) -> Result<BusListingQueryOptions, sqlx::Error> {
         let scale = sqlx::query_scalar::<_, String>(
             r#"
             SELECT DISTINCT scale
@@ -208,8 +166,8 @@ impl BusListings {
             ORDER BY scale
             "#,
         )
-            .fetch_all(&self.pool)
-            .await?;
+        .fetch_all(&self.pool)
+        .await?;
 
         let origin_code = sqlx::query_scalar::<_, String>(
             r#"
@@ -219,8 +177,8 @@ impl BusListings {
             ORDER BY origin_code
             "#,
         )
-            .fetch_all(&self.pool)
-            .await?;
+        .fetch_all(&self.pool)
+        .await?;
 
         let manufacturer = sqlx::query_scalar::<_, String>(
             r#"
@@ -230,8 +188,8 @@ impl BusListings {
             ORDER BY manufacturer
             "#,
         )
-            .fetch_all(&self.pool)
-            .await?;
+        .fetch_all(&self.pool)
+        .await?;
 
         let manufacturer_code = sqlx::query_scalar::<_, String>(
             r#"
@@ -242,8 +200,8 @@ impl BusListings {
             ORDER BY manufacturer_code
             "#,
         )
-            .fetch_all(&self.pool)
-            .await?;
+        .fetch_all(&self.pool)
+        .await?;
 
         let condition = sqlx::query_scalar::<_, String>(
             r#"
@@ -253,8 +211,8 @@ impl BusListings {
             ORDER BY condition
             "#,
         )
-            .fetch_all(&self.pool)
-            .await?;
+        .fetch_all(&self.pool)
+        .await?;
 
         Ok(BusListingQueryOptions {
             scale,
@@ -265,10 +223,7 @@ impl BusListings {
         })
     }
 
-    pub async fn create(
-        &self,
-        listing: &BusListingResource,
-    ) -> Result<i64, sqlx::Error> {
+    pub async fn create(&self, listing: &BusListingResource) -> Result<i64, sqlx::Error> {
         sqlx::query_scalar::<_, i64>(
             r#"
             INSERT INTO bus_listings (
@@ -308,39 +263,36 @@ impl BusListings {
             RETURNING id
             "#,
         )
-            .bind(&listing.external_id)
-            .bind(&listing.origin)
-            .bind(&listing.origin_code)
-            .bind(&listing.fetched_from)
-            .bind(&listing.title)
-            .bind(&listing.description)
-            .bind(&listing.link)
-            .bind(&listing.scale)
-            .bind(&listing.manufacturer)
-            .bind(&listing.manufacturer_code)
-            .bind(listing.price_low)
-            .bind(listing.price_high)
-            .bind(&listing.currency)
-            .bind(&listing.image_list)
-            .bind(&listing.seller_name)
-            .bind(&listing.seller_link)
-            .bind(&listing.condition)
-            .bind(&listing.listed_at)
-            .bind(&listing.ends_at)
-            .bind(&listing.fetched_at)
-            .bind(&listing.category)
-            .bind(listing.total)
-            .bind(listing.lowest)
-            .bind(listing.sold_out)
-            .bind(listing.some_sold_out)
-            .fetch_one(&self.pool)
-            .await
+        .bind(&listing.external_id)
+        .bind(&listing.origin)
+        .bind(&listing.origin_code)
+        .bind(&listing.fetched_from)
+        .bind(&listing.title)
+        .bind(&listing.description)
+        .bind(&listing.link)
+        .bind(&listing.scale)
+        .bind(&listing.manufacturer)
+        .bind(&listing.manufacturer_code)
+        .bind(listing.price_low)
+        .bind(listing.price_high)
+        .bind(&listing.currency)
+        .bind(&listing.image_list)
+        .bind(&listing.seller_name)
+        .bind(&listing.seller_link)
+        .bind(&listing.condition)
+        .bind(&listing.listed_at)
+        .bind(&listing.ends_at)
+        .bind(&listing.fetched_at)
+        .bind(&listing.category)
+        .bind(listing.total)
+        .bind(listing.lowest)
+        .bind(listing.sold_out)
+        .bind(listing.some_sold_out)
+        .fetch_one(&self.pool)
+        .await
     }
 
-    pub async fn update(
-        &self,
-        listing: &BusListingResource,
-    ) -> Result<(), sqlx::Error> {
+    pub async fn update(&self, listing: &BusListingResource) -> Result<(), sqlx::Error> {
         sqlx::query(
             r#"
             UPDATE bus_listings SET
@@ -372,42 +324,39 @@ impl BusListings {
             WHERE id = $26
             "#,
         )
-            .bind(&listing.external_id)
-            .bind(&listing.origin)
-            .bind(&listing.origin_code)
-            .bind(&listing.fetched_from)
-            .bind(&listing.title)
-            .bind(&listing.description)
-            .bind(&listing.link)
-            .bind(&listing.scale)
-            .bind(&listing.manufacturer)
-            .bind(&listing.manufacturer_code)
-            .bind(listing.price_low)
-            .bind(listing.price_high)
-            .bind(&listing.currency)
-            .bind(&listing.image_list)
-            .bind(&listing.seller_name)
-            .bind(&listing.seller_link)
-            .bind(&listing.condition)
-            .bind(&listing.listed_at)
-            .bind(&listing.ends_at)
-            .bind(&listing.fetched_at)
-            .bind(&listing.category)
-            .bind(listing.total)
-            .bind(listing.lowest)
-            .bind(listing.sold_out)
-            .bind(listing.some_sold_out)
-            .bind(listing.id)
-            .execute(&self.pool)
-            .await?;
+        .bind(&listing.external_id)
+        .bind(&listing.origin)
+        .bind(&listing.origin_code)
+        .bind(&listing.fetched_from)
+        .bind(&listing.title)
+        .bind(&listing.description)
+        .bind(&listing.link)
+        .bind(&listing.scale)
+        .bind(&listing.manufacturer)
+        .bind(&listing.manufacturer_code)
+        .bind(listing.price_low)
+        .bind(listing.price_high)
+        .bind(&listing.currency)
+        .bind(&listing.image_list)
+        .bind(&listing.seller_name)
+        .bind(&listing.seller_link)
+        .bind(&listing.condition)
+        .bind(&listing.listed_at)
+        .bind(&listing.ends_at)
+        .bind(&listing.fetched_at)
+        .bind(&listing.category)
+        .bind(listing.total)
+        .bind(listing.lowest)
+        .bind(listing.sold_out)
+        .bind(listing.some_sold_out)
+        .bind(listing.id)
+        .execute(&self.pool)
+        .await?;
 
         Ok(())
     }
 
-    pub async fn upsert(
-        &self,
-        listing: &BusListingResource,
-    ) -> Result<(), sqlx::Error> {
+    pub async fn upsert(&self, listing: &BusListingResource) -> Result<(), sqlx::Error> {
         sqlx::query(
             r#"
             INSERT INTO bus_listings (
@@ -470,33 +419,33 @@ impl BusListings {
                 some_sold_out = EXCLUDED.some_sold_out
             "#,
         )
-            .bind(&listing.external_id)
-            .bind(&listing.origin)
-            .bind(&listing.origin_code)
-            .bind(&listing.fetched_from)
-            .bind(&listing.title)
-            .bind(&listing.description)
-            .bind(&listing.link)
-            .bind(&listing.scale)
-            .bind(&listing.manufacturer)
-            .bind(&listing.manufacturer_code)
-            .bind(listing.price_low)
-            .bind(listing.price_high)
-            .bind(&listing.currency)
-            .bind(&listing.image_list)
-            .bind(&listing.seller_name)
-            .bind(&listing.seller_link)
-            .bind(&listing.condition)
-            .bind(&listing.listed_at)
-            .bind(&listing.ends_at)
-            .bind(&listing.fetched_at)
-            .bind(&listing.category)
-            .bind(listing.total)
-            .bind(listing.lowest)
-            .bind(listing.sold_out)
-            .bind(listing.some_sold_out)
-            .execute(&self.pool)
-            .await?;
+        .bind(&listing.external_id)
+        .bind(&listing.origin)
+        .bind(&listing.origin_code)
+        .bind(&listing.fetched_from)
+        .bind(&listing.title)
+        .bind(&listing.description)
+        .bind(&listing.link)
+        .bind(&listing.scale)
+        .bind(&listing.manufacturer)
+        .bind(&listing.manufacturer_code)
+        .bind(listing.price_low)
+        .bind(listing.price_high)
+        .bind(&listing.currency)
+        .bind(&listing.image_list)
+        .bind(&listing.seller_name)
+        .bind(&listing.seller_link)
+        .bind(&listing.condition)
+        .bind(&listing.listed_at)
+        .bind(&listing.ends_at)
+        .bind(&listing.fetched_at)
+        .bind(&listing.category)
+        .bind(listing.total)
+        .bind(listing.lowest)
+        .bind(listing.sold_out)
+        .bind(listing.some_sold_out)
+        .execute(&self.pool)
+        .await?;
 
         Ok(())
     }

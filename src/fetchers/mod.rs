@@ -1,13 +1,13 @@
-use std::path::Path;
-use std::sync::Arc;
-use chrono::TimeDelta;
 use crate::db::Database;
 use crate::db::resource::last_fetch::last_fetch::LastFetch;
 use crate::fetchers::transxchange_parser::parse_transxchange;
+use chrono::TimeDelta;
+use std::path::Path;
+use std::sync::Arc;
 
+pub mod bustimes;
 pub mod mbc;
 pub mod model_manufacturers;
-pub mod bustimes;
 mod transxchange;
 mod transxchange_parser;
 pub mod ttcdiecast;
@@ -20,8 +20,7 @@ pub fn run_all_in_background(db: Arc<Database>) {
 
 pub async fn run_all(db: Arc<Database>) {
     let last_fetches = db.last_fetches.get().await.unwrap();
-    
-    
+
     if 1 == 2 {
         let db2 = Arc::clone(&db);
 
@@ -108,7 +107,11 @@ pub async fn run_all(db: Arc<Database>) {
 
     if bustimes::has_passed(last_fetches.models_ttcdiecast, TimeDelta::days(1)).unwrap() == true {
         println!("Scraping TTCDiecast");
-        let ttcdiecast = match ttcdiecast::scrape_products("https://www.ttcdiecast.com/collections/northcord-model-buses").await {
+        let ttcdiecast = match ttcdiecast::scrape_products(
+            "https://www.ttcdiecast.com/collections/northcord-model-buses",
+        )
+        .await
+        {
             Ok(ok) => ok,
             Err(err) => {
                 eprintln!("{}", err);
@@ -125,7 +128,9 @@ pub async fn run_all(db: Arc<Database>) {
             }
         }
 
-
-        db.last_fetches.set(LastFetch::ModelsTtcdiecast).await.unwrap();
+        db.last_fetches
+            .set(LastFetch::ModelsTtcdiecast)
+            .await
+            .unwrap();
     }
 }

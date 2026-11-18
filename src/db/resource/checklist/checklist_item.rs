@@ -3,7 +3,9 @@ use std::sync::Arc;
 use sqlx::PgPool;
 
 use crate::db::Database;
-use crate::db::resource::checklist::checklist_item_def::{RouteChecklistItem, RouteChecklistItemFilledOut};
+use crate::db::resource::checklist::checklist_item_def::{
+    RouteChecklistItem, RouteChecklistItemFilledOut,
+};
 
 pub static SQL_ROUTE_CHECKLIST_ITEMS: &str = r#"
 CREATE TABLE IF NOT EXISTS route_checklist_items (
@@ -27,10 +29,7 @@ impl RouteChecklistItems {
         Self { pool }
     }
 
-    pub async fn get(
-        &self,
-        id: i64,
-    ) -> Result<Option<RouteChecklistItem>, sqlx::Error> {
+    pub async fn get(&self, id: i64) -> Result<Option<RouteChecklistItem>, sqlx::Error> {
         sqlx::query_as::<_, RouteChecklistItem>(
             r#"
             SELECT *
@@ -38,9 +37,9 @@ impl RouteChecklistItems {
             WHERE id = $1
             "#,
         )
-            .bind(id)
-            .fetch_optional(&self.pool)
-            .await
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
     }
 
     pub async fn get_by_checklist(
@@ -55,9 +54,9 @@ impl RouteChecklistItems {
             ORDER BY added_at ASC
             "#,
         )
-            .bind(checklist_id)
-            .fetch_all(&self.pool)
-            .await
+        .bind(checklist_id)
+        .fetch_all(&self.pool)
+        .await
     }
 
     pub async fn get_by_line(
@@ -73,10 +72,10 @@ impl RouteChecklistItems {
               AND line_id = $2
             "#,
         )
-            .bind(checklist_id)
-            .bind(line_id)
-            .fetch_optional(&self.pool)
-            .await
+        .bind(checklist_id)
+        .bind(line_id)
+        .fetch_optional(&self.pool)
+        .await
     }
 
     pub async fn create(
@@ -97,23 +96,15 @@ impl RouteChecklistItems {
             RETURNING id
             "#,
         )
-            .bind(checklist_id)
-            .bind(line_id)
-            .bind(added_at)
-            .fetch_optional(&self.pool)
-            .await?
-            .map_or_else(
-                || {
-                    Err(sqlx::Error::RowNotFound)
-                },
-                Ok,
-            )
+        .bind(checklist_id)
+        .bind(line_id)
+        .bind(added_at)
+        .fetch_optional(&self.pool)
+        .await?
+        .map_or_else(|| Err(sqlx::Error::RowNotFound), Ok)
     }
 
-    pub async fn update(
-        &self,
-        item: &RouteChecklistItem,
-    ) -> Result<(), sqlx::Error> {
+    pub async fn update(&self, item: &RouteChecklistItem) -> Result<(), sqlx::Error> {
         sqlx::query(
             r#"
             UPDATE route_checklist_items
@@ -125,13 +116,13 @@ impl RouteChecklistItems {
             WHERE id = $5
             "#,
         )
-            .bind(item.checklist_id)
-            .bind(&item.line_id)
-            .bind(&item.added_at)
-            .bind(&item.completed_at)
-            .bind(item.id)
-            .execute(&self.pool)
-            .await?;
+        .bind(item.checklist_id)
+        .bind(&item.line_id)
+        .bind(&item.added_at)
+        .bind(&item.completed_at)
+        .bind(item.id)
+        .execute(&self.pool)
+        .await?;
 
         Ok(())
     }
@@ -148,18 +139,16 @@ impl RouteChecklistItems {
             WHERE id = $2
             "#,
         )
-            .bind(completed_at)
-            .bind(id)
-            .execute(&self.pool)
-            .await?;
+        .bind(completed_at)
+        .bind(id)
+        .execute(&self.pool)
+        .await?;
 
         Ok(())
     }
 
     pub async fn delete(&self, id: i64) -> Result<(), sqlx::Error> {
-        sqlx::query(
-            "DELETE FROM route_checklist_items WHERE id = $1",
-        )
+        sqlx::query("DELETE FROM route_checklist_items WHERE id = $1")
             .bind(id)
             .execute(&self.pool)
             .await?;
@@ -174,10 +163,7 @@ impl RouteChecklistItems {
         let mut filled_out = Vec::with_capacity(items.len());
 
         for item in items {
-            let tx_line = db
-                .tx_lines
-                .get_by_line_id(&item.line_id)
-                .await?;
+            let tx_line = db.tx_lines.get_by_line_id(&item.line_id).await?;
 
             filled_out.push(RouteChecklistItemFilledOut {
                 id: item.id,

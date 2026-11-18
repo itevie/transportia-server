@@ -1,17 +1,21 @@
+use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
-use axum::Json;
 use axum::response::{IntoResponse, Response};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
 use crate::auth::quick::{is_admin, is_trusted_user};
-use crate::db::resource::model_bus::model_bus_ownership::{ModelBusOwnershipQuery, ModelBusOwnerships};
-use crate::db::resource::model_bus::model_bus_ownership_def::{ModelBusOwnership, ModelBusOwnershipFilledOut};
+use crate::db::resource::model_bus::model_bus_ownership::{
+    ModelBusOwnershipQuery, ModelBusOwnerships,
+};
+use crate::db::resource::model_bus::model_bus_ownership_def::{
+    ModelBusOwnership, ModelBusOwnershipFilledOut,
+};
 use crate::extractors::authenticator::AuthUser;
 use crate::extractors::optional_authenticator::OptionalAuthUser;
-use crate::http::errors::ApiError;
 use crate::http::HttpState;
+use crate::http::errors::ApiError;
 
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
 pub struct ModelBusOwnershipCreateRequest {
@@ -112,10 +116,7 @@ pub async fn get_model_bus_ownership(
         .await
         .map_err(|err| ApiError::Database(err.to_string()))?
         .filter(|ownership| ownership.user_id == user_id)
-        .ok_or_else(|| {
-            ApiError::NotFound("Model bus ownership not found".to_string())
-        })?;
-
+        .ok_or_else(|| ApiError::NotFound("Model bus ownership not found".to_string()))?;
 
     let filled = ModelBusOwnerships::fill_out(state.db.clone(), vec![ownership], Some(user_id))
         .await
@@ -234,9 +235,7 @@ pub async fn update_model_bus_ownership(
         .await
         .map_err(|err| ApiError::Database(err.to_string()))?
         .filter(|ownership| ownership.user_id == user_id)
-        .ok_or_else(|| {
-            ApiError::NotFound("Model bus ownership not found".to_string())
-        })?;
+        .ok_or_else(|| ApiError::NotFound("Model bus ownership not found".to_string()))?;
 
     if let Some(certificate_number) = body.certificate_number {
         ownership.certificate_number = Some(certificate_number);
@@ -307,9 +306,7 @@ pub async fn delete_model_bus_ownership(
         .get(id)
         .await
         .map_err(|err| ApiError::Database(err.to_string()))?
-        .ok_or_else(|| {
-            ApiError::NotFound("Model bus ownership not found".to_string())
-        })?;
+        .ok_or_else(|| ApiError::NotFound("Model bus ownership not found".to_string()))?;
 
     state
         .db

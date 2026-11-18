@@ -1,12 +1,12 @@
-use axum::extract::{Path, Query, State};
-use axum::http::StatusCode;
-use axum::Json;
-use serde::{Deserialize, Serialize};
-use utoipa::{IntoParams, ToSchema};
 use crate::db::resource::star_rating::star_rating_def::PhotoRating;
 use crate::extractors::authenticator::AuthUser;
-use crate::http::errors::ApiError;
 use crate::http::HttpState;
+use crate::http::errors::ApiError;
+use axum::Json;
+use axum::extract::{Path, Query, State};
+use axum::http::StatusCode;
+use serde::{Deserialize, Serialize};
+use utoipa::{IntoParams, ToSchema};
 
 #[derive(Debug, Deserialize, IntoParams)]
 pub struct PhotoRatingQuery {

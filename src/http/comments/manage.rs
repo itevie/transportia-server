@@ -1,15 +1,14 @@
-use axum::extract::{Path, State};
-use axum::http::StatusCode;
-use axum::Json;
-use chrono::Utc;
-use serde::Deserialize;
-use utoipa::ToSchema;
 use crate::db::resource::comment::comment::Comments;
 use crate::db::resource::comment::comment_def::CommentFilledOut;
 use crate::extractors::authenticator::AuthUser;
-use crate::http::errors::ApiError;
 use crate::http::HttpState;
-
+use crate::http::errors::ApiError;
+use axum::Json;
+use axum::extract::{Path, State};
+use axum::http::StatusCode;
+use chrono::Utc;
+use serde::Deserialize;
+use utoipa::ToSchema;
 
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct CreateCommentRequest {
@@ -56,7 +55,9 @@ pub async fn create_comment(
             .get(parent_id)
             .await
             .map_err(|err| ApiError::GenericServerError(err.to_string()))?
-            .ok_or_else(|| ApiError::GenericServerError("Can't find parent comment id".to_string()))?;
+            .ok_or_else(|| {
+                ApiError::GenericServerError("Can't find parent comment id".to_string())
+            })?;
 
         if parent.thread != id {
             return Err(ApiError::GenericServerError(
@@ -68,12 +69,7 @@ pub async fn create_comment(
     let comment = state
         .db
         .comments
-        .create(
-            id,
-            user_id,
-            request.body.trim(),
-            request.parent_comment_id,
-        )
+        .create(id, user_id, request.body.trim(), request.parent_comment_id)
         .await
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 
@@ -119,7 +115,7 @@ pub async fn update_comment(
         .get(id)
         .await
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?
-        .ok_or_else(|| ApiError::GenericServerError("Can't find parent comment id".to_string()))?;;
+        .ok_or_else(|| ApiError::GenericServerError("Can't find parent comment id".to_string()))?;
 
     if comment.author_id != user_id {
         return Err(ApiError::GenericServerError(

@@ -1,7 +1,7 @@
+use crate::db::resource::user::def::User;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use utoipa::ToSchema;
-use crate::db::resource::user::def::User;
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, FromRow)]
 pub struct CommentThread {
@@ -41,5 +41,5 @@ pub struct CommentFilledOut {
     pub edited_at: Option<String>,
     pub parent_comment_id: Option<i64>,
     pub created_at: String,
-    pub is_favourited: Option<bool>
+    pub is_favourited: Option<bool>,
 }

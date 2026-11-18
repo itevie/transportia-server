@@ -1,8 +1,8 @@
+use crate::db::resource::comment::comment_def::CommentThread;
 use chrono::Utc;
 use serde::Deserialize;
 use sqlx::PgPool;
 use utoipa::{IntoParams, ToSchema};
-use crate::db::resource::comment::comment_def::CommentThread;
 
 pub static SQL_COMMENT_THREAD: &str = r#"
 CREATE TABLE IF NOT EXISTS comment_threads (
@@ -35,9 +35,9 @@ impl CommentThreads {
             WHERE id = $1
             "#,
         )
-            .bind(id)
-            .fetch_optional(&self.pool)
-            .await
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
     }
 
     pub async fn create(&self) -> sqlx::Result<i64> {
@@ -50,15 +50,12 @@ impl CommentThreads {
             RETURNING id
             "#,
         )
-            .bind(created_at)
-            .fetch_one(&self.pool)
-            .await
+        .bind(created_at)
+        .fetch_one(&self.pool)
+        .await
     }
 
-    pub async fn search(
-        &self,
-        query: &CommentThreadQuery,
-    ) -> sqlx::Result<Vec<CommentThread>> {
+    pub async fn search(&self, query: &CommentThreadQuery) -> sqlx::Result<Vec<CommentThread>> {
         let page_length = query.page_length.unwrap_or(50).clamp(1, 1000);
         let offset = query.offset.unwrap_or(0).max(0);
 
@@ -70,10 +67,10 @@ impl CommentThreads {
             LIMIT $1 OFFSET $2
             "#,
         )
-            .bind(page_length)
-            .bind(offset)
-            .fetch_all(&self.pool)
-            .await
+        .bind(page_length)
+        .bind(offset)
+        .fetch_all(&self.pool)
+        .await
     }
 
     pub async fn delete(&self, id: i64) -> sqlx::Result<()> {

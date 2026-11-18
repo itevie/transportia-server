@@ -1,11 +1,11 @@
+use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
-use axum::Json;
 
 use crate::db::resource::photo::model_bus_photo_details_def::ModelBusPhotoDetailsUpdate;
 use crate::db::resource::photo::photo::Photos;
-use crate::http::errors::ApiError;
 use crate::http::HttpState;
+use crate::http::errors::ApiError;
 
 #[utoipa::path(
     patch,

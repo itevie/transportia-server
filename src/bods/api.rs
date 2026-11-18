@@ -1,7 +1,6 @@
-
 use reqwest::{
-    header::{HeaderMap, HeaderValue},
     Client,
+    header::{HeaderMap, HeaderValue},
 };
 use serde::de::DeserializeOwned;
 use serde_json::Value;
@@ -33,8 +32,7 @@ impl BodsClient {
         let mut headers = HeaderMap::new();
 
         if let Some(key) = api_key {
-            let value = HeaderValue::from_str(key)
-                .map_err(|_| BodsError::InvalidApiKey)?;
+            let value = HeaderValue::from_str(key).map_err(|_| BodsError::InvalidApiKey)?;
 
             headers.insert("x-api-key", value);
         }
@@ -51,11 +49,7 @@ impl BodsClient {
     }
 
     /// Fetch an endpoint and deserialize the JSON into a typed value.
-    pub async fn get<T>(
-        &self,
-        endpoint: &str,
-        params: &[(&str, &str)],
-    ) -> Result<T, BodsError>
+    pub async fn get<T>(&self, endpoint: &str, params: &[(&str, &str)]) -> Result<T, BodsError>
     where
         T: DeserializeOwned,
     {

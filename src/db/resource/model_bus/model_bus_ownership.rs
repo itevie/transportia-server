@@ -1,12 +1,14 @@
 use std::sync::Arc;
 
-use sqlx::{PgPool, Postgres, QueryBuilder};
 use serde::Deserialize;
+use sqlx::{PgPool, Postgres, QueryBuilder};
 use utoipa::{IntoParams, ToSchema};
 
 use crate::db::Database;
 use crate::db::resource::model_bus::model_bus::ModelBuses;
-use crate::db::resource::model_bus::model_bus_ownership_def::{ModelBusOwnership, ModelBusOwnershipFilledOut};
+use crate::db::resource::model_bus::model_bus_ownership_def::{
+    ModelBusOwnership, ModelBusOwnershipFilledOut,
+};
 use crate::db::resource::photo::photo::PhotoQuery;
 use crate::db::resource::photo::photo_def::PhotoType;
 
@@ -63,10 +65,7 @@ impl ModelBusOwnerships {
         Self { pool }
     }
 
-    pub async fn get(
-        &self,
-        id: i64,
-    ) -> Result<Option<ModelBusOwnership>, sqlx::Error> {
+    pub async fn get(&self, id: i64) -> Result<Option<ModelBusOwnership>, sqlx::Error> {
         sqlx::query_as::<_, ModelBusOwnership>(
             r#"
             SELECT *
@@ -74,9 +73,9 @@ impl ModelBusOwnerships {
             WHERE id = $1
             "#,
         )
-            .bind(id)
-            .fetch_optional(&self.pool)
-            .await
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
     }
 
     pub async fn search(
@@ -96,15 +95,11 @@ impl ModelBusOwnerships {
         );
 
         if let Some(value) = query.user_id {
-            builder
-                .push(" AND mbo.user_id = ")
-                .push_bind(value);
+            builder.push(" AND mbo.user_id = ").push_bind(value);
         }
 
         if let Some(value) = query.model_bus_id {
-            builder
-                .push(" AND mbo.model_bus_id = ")
-                .push_bind(value);
+            builder.push(" AND mbo.model_bus_id = ").push_bind(value);
         }
 
         if let Some(value) = query.certificate_number {
@@ -114,9 +109,7 @@ impl ModelBusOwnerships {
         }
 
         if let Some(value) = &query.bought_at {
-            builder
-                .push(" AND mbo.bought_at = ")
-                .push_bind(value);
+            builder.push(" AND mbo.bought_at = ").push_bind(value);
         }
 
         // Model bus filters
@@ -133,9 +126,7 @@ impl ModelBusOwnerships {
         }
 
         if let Some(value) = query.scale {
-            builder
-                .push(" AND mb.scale = ")
-                .push_bind(value);
+            builder.push(" AND mb.scale = ").push_bind(value);
         }
 
         if let Some(value) = &query.operator {
@@ -187,9 +178,7 @@ impl ModelBusOwnerships {
         }
 
         if let Some(value) = &query.released {
-            builder
-                .push(" AND mb.released = ")
-                .push_bind(value);
+            builder.push(" AND mb.released = ").push_bind(value);
         }
 
         // General search across ownership and model bus fields
@@ -249,10 +238,7 @@ impl ModelBusOwnerships {
             .await
     }
 
-    pub async fn create(
-        &self,
-        ownership: &ModelBusOwnership,
-    ) -> Result<i64, sqlx::Error> {
+    pub async fn create(&self, ownership: &ModelBusOwnership) -> Result<i64, sqlx::Error> {
         sqlx::query_scalar::<_, i64>(
             r#"
             INSERT INTO model_bus_ownerships (
@@ -267,20 +253,17 @@ impl ModelBusOwnerships {
             RETURNING id
             "#,
         )
-            .bind(ownership.user_id)
-            .bind(ownership.model_bus_id)
-            .bind(ownership.certificate_number)
-            .bind(&ownership.bought_at)
-            .bind(&ownership.defects)
-            .bind(&ownership.created_at)
-            .fetch_one(&self.pool)
-            .await
+        .bind(ownership.user_id)
+        .bind(ownership.model_bus_id)
+        .bind(ownership.certificate_number)
+        .bind(&ownership.bought_at)
+        .bind(&ownership.defects)
+        .bind(&ownership.created_at)
+        .fetch_one(&self.pool)
+        .await
     }
 
-    pub async fn upsert(
-        &self,
-        ownership: &ModelBusOwnership,
-    ) -> Result<(), sqlx::Error> {
+    pub async fn upsert(&self, ownership: &ModelBusOwnership) -> Result<(), sqlx::Error> {
         sqlx::query(
             r#"
             INSERT INTO model_bus_ownerships (
@@ -301,23 +284,21 @@ impl ModelBusOwnerships {
                 defects = EXCLUDED.defects
             "#,
         )
-            .bind(ownership.id)
-            .bind(ownership.user_id)
-            .bind(ownership.model_bus_id)
-            .bind(ownership.certificate_number)
-            .bind(&ownership.bought_at)
-            .bind(&ownership.defects)
-            .bind(&ownership.created_at)
-            .execute(&self.pool)
-            .await?;
+        .bind(ownership.id)
+        .bind(ownership.user_id)
+        .bind(ownership.model_bus_id)
+        .bind(ownership.certificate_number)
+        .bind(&ownership.bought_at)
+        .bind(&ownership.defects)
+        .bind(&ownership.created_at)
+        .execute(&self.pool)
+        .await?;
 
         Ok(())
     }
 
     pub async fn delete(&self, id: i64) -> Result<(), sqlx::Error> {
-        sqlx::query(
-            "DELETE FROM model_bus_ownerships WHERE id = $1",
-        )
+        sqlx::query("DELETE FROM model_bus_ownerships WHERE id = $1")
             .bind(id)
             .execute(&self.pool)
             .await?;
@@ -339,16 +320,10 @@ impl ModelBusOwnerships {
                 .await?
                 .ok_or(sqlx::Error::RowNotFound)?;
 
-            let mut model_bus_results = ModelBuses::fill_out(
-                db.clone(),
-                vec![model_bus],
-                user_id,
-            )
-                .await?;
+            let mut model_bus_results =
+                ModelBuses::fill_out(db.clone(), vec![model_bus], user_id).await?;
 
-            let model_bus_f = model_bus_results
-                .pop()
-                .ok_or(sqlx::Error::RowNotFound)?;
+            let model_bus_f = model_bus_results.pop().ok_or(sqlx::Error::RowNotFound)?;
 
             let photo = db
                 .photos

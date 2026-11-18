@@ -1,14 +1,13 @@
-
 use axum::{
-    extract::{Query, State},
     Json,
+    extract::{Query, State},
 };
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
 
-use crate::db::big_search::{big_search, BigSearchResult};
-use crate::http::errors::ApiError;
+use crate::db::big_search::{BigSearchResult, big_search};
 use crate::http::HttpState;
+use crate::http::errors::ApiError;
 
 #[derive(Debug, Deserialize, IntoParams)]
 pub struct BigSearchQuery {

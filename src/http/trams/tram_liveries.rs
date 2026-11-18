@@ -1,7 +1,6 @@
-
+use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
-use axum::Json;
 use axum::response::{IntoResponse, Response};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
@@ -10,8 +9,8 @@ use crate::auth::quick::{is_admin, is_trusted_user};
 use crate::db::resource::tram::tram_livery_def::TramLivery;
 use crate::extractors::authenticator::AuthUser;
 use crate::extractors::optional_authenticator::OptionalAuthUser;
-use crate::http::errors::ApiError;
 use crate::http::HttpState;
+use crate::http::errors::ApiError;
 
 #[derive(Debug, Deserialize, Serialize, ToSchema, IntoParams)]
 pub struct TramLiverySearchQuery {
@@ -105,9 +104,7 @@ pub async fn get_tram_livery(
         .get(id)
         .await
         .map_err(|err| ApiError::Database(err.to_string()))?
-        .ok_or_else(|| {
-            ApiError::NotFound("Tram livery not found".to_string())
-        })?;
+        .ok_or_else(|| ApiError::NotFound("Tram livery not found".to_string()))?;
 
     Ok(Json(livery))
 }
@@ -162,11 +159,7 @@ pub async fn create_tram_livery(
         .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
-    Ok((
-        StatusCode::CREATED,
-        Json(TramLiveryCreateResponse { id }),
-    )
-        .into_response())
+    Ok((StatusCode::CREATED, Json(TramLiveryCreateResponse { id })).into_response())
 }
 
 #[utoipa::path(
@@ -218,9 +211,7 @@ pub async fn update_tram_livery(
         .get(id)
         .await
         .map_err(|err| ApiError::Database(err.to_string()))?
-        .ok_or_else(|| {
-            ApiError::NotFound("Tram livery not found".to_string())
-        })?;
+        .ok_or_else(|| ApiError::NotFound("Tram livery not found".to_string()))?;
 
     if let Some(name) = body.name {
         livery.name = name;
@@ -291,9 +282,7 @@ pub async fn delete_tram_livery(
         .get(id)
         .await
         .map_err(|err| ApiError::Database(err.to_string()))?
-        .ok_or_else(|| {
-            ApiError::NotFound("Tram livery not found".to_string())
-        })?;
+        .ok_or_else(|| ApiError::NotFound("Tram livery not found".to_string()))?;
 
     state
         .db

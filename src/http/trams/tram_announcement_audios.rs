@@ -1,7 +1,6 @@
-
+use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
-use axum::Json;
 use axum::response::{IntoResponse, Response};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
@@ -11,8 +10,8 @@ use crate::db::resource::tram::tram_announcement_audio::TramAnnouncementAudioQue
 use crate::db::resource::tram::tram_announcement_audio_def::TramAnnouncementAudio;
 use crate::extractors::authenticator::AuthUser;
 use crate::extractors::optional_authenticator::OptionalAuthUser;
-use crate::http::errors::ApiError;
 use crate::http::HttpState;
+use crate::http::errors::ApiError;
 
 #[derive(Debug, Deserialize, Serialize, ToSchema, IntoParams)]
 pub struct TramAnnouncementAudioSearchQuery {
@@ -26,7 +25,6 @@ pub struct TramAnnouncementAudioSearchQuery {
     pub page_length: Option<i64>,
     pub offset: Option<i64>,
 }
-
 
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
 pub struct TramAnnouncementAudioUpdateRequest {
@@ -119,11 +117,7 @@ pub async fn get_tram_announcement_audio(
         .get(id)
         .await
         .map_err(|err| ApiError::Database(err.to_string()))?
-        .ok_or_else(|| {
-            ApiError::NotFound(
-                "Tram announcement audio not found".to_string(),
-            )
-        })?;
+        .ok_or_else(|| ApiError::NotFound("Tram announcement audio not found".to_string()))?;
 
     Ok(Json(audio))
 }
@@ -140,7 +134,9 @@ pub async fn get_tram_announcement_audio(
 pub async fn get_tram_announcement_audio_groups(
     State(state): State<HttpState>,
 ) -> Result<impl IntoResponse, ApiError> {
-    let groups = state.db.tram_announcement_audios
+    let groups = state
+        .db
+        .tram_announcement_audios
         .get_groups()
         .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
@@ -197,11 +193,7 @@ pub async fn update_tram_announcement_audio(
         .get(id)
         .await
         .map_err(|err| ApiError::Database(err.to_string()))?
-        .ok_or_else(|| {
-            ApiError::NotFound(
-                "Tram announcement audio not found".to_string(),
-            )
-        })?;
+        .ok_or_else(|| ApiError::NotFound("Tram announcement audio not found".to_string()))?;
 
     if let Some(label) = body.label {
         audio.label = Some(label);
@@ -228,7 +220,6 @@ pub async fn update_tram_announcement_audio(
 
     Ok(StatusCode::NO_CONTENT.into_response())
 }
-
 
 #[utoipa::path(
     get,
@@ -267,28 +258,18 @@ pub async fn get_tram_announcement_audio_file(
         .get(id)
         .await
         .map_err(|err| ApiError::Database(err.to_string()))?
-        .ok_or_else(|| {
-            ApiError::NotFound(
-                "Tram announcement audio not found".to_string(),
-            )
-        })?;
+        .ok_or_else(|| ApiError::NotFound("Tram announcement audio not found".to_string()))?;
 
     let data_dir = tokio::fs::canonicalize("data/tram_audios")
         .await
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 
-    let file_path = data_dir
-        .join(&audio.audio_group)
-        .join(&audio.file_name);
+    let file_path = data_dir.join(&audio.audio_group).join(&audio.file_name);
 
-    let file_path = tokio::fs::canonicalize(file_path)
-        .await
-        .map_err(|err| {
-            println!("Canonicalize error: {err}");
-            ApiError::NotFound(
-                "Tram announcement audio file not found".to_string(),
-            )
-        })?;
+    let file_path = tokio::fs::canonicalize(file_path).await.map_err(|err| {
+        println!("Canonicalize error: {err}");
+        ApiError::NotFound("Tram announcement audio file not found".to_string())
+    })?;
 
     if !file_path.starts_with(&data_dir) {
         return Err(ApiError::NotFound(
@@ -300,11 +281,5 @@ pub async fn get_tram_announcement_audio_file(
         .await
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 
-    Ok((
-        [
-            (axum::http::header::CONTENT_TYPE, "audio/mpeg"),
-        ],
-        contents,
-    )
-        .into_response())
+    Ok(([(axum::http::header::CONTENT_TYPE, "audio/mpeg")], contents).into_response())
 }

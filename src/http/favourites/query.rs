@@ -1,17 +1,17 @@
-use axum::extract::{Path, Query, State};
-use axum::http::StatusCode;
-use axum::Json;
-use serde::Deserialize;
-use utoipa::{IntoParams, ToSchema};
 use crate::db::resource::favourite::favourite_def::{Favourite, FavouriteFilled, FavouriteType};
 use crate::extractors::authenticator::AuthUser;
-use crate::http::errors::ApiError;
 use crate::http::HttpState;
+use crate::http::errors::ApiError;
+use axum::Json;
+use axum::extract::{Path, Query, State};
+use axum::http::StatusCode;
+use serde::Deserialize;
+use utoipa::{IntoParams, ToSchema};
 
 #[derive(Debug, Deserialize, ToSchema, IntoParams)]
 pub struct FavouriteFetchQuery {
     pub target_type: FavouriteType,
-    pub fill_out: Option<bool>
+    pub fill_out: Option<bool>,
 }
 
 // TODO: Make it so you can fetch other people's favourites
@@ -64,10 +64,9 @@ pub async fn get_favourites(
         ));
     }
 
-    Ok(Json(
-        serde_json::to_value(favourites)
-            .map_err(|err| ApiError::GenericServerError(err.to_string()))?,
-    ))
+    Ok(Json(serde_json::to_value(favourites).map_err(|err| {
+        ApiError::GenericServerError(err.to_string())
+    })?))
 }
 
 #[derive(Debug, Deserialize, ToSchema, IntoParams)]
@@ -127,10 +126,9 @@ pub async fn get_favourites_by_group(
         ));
     }
 
-    Ok(Json(
-        serde_json::to_value(favourites)
-            .map_err(|err| ApiError::GenericServerError(err.to_string()))?,
-    ))
+    Ok(Json(serde_json::to_value(favourites).map_err(|err| {
+        ApiError::GenericServerError(err.to_string())
+    })?))
 }
 
 #[utoipa::path(

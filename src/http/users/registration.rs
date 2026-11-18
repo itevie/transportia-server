@@ -1,18 +1,18 @@
-use axum::extract::State;
-use axum::http::StatusCode;
-use axum::Json;
-use axum::response::{IntoResponse, Response};
-use serde::Deserialize;
-use utoipa::ToSchema;
 use crate::http::HttpState;
 use crate::http::errors::ApiError;
 use crate::http::users::validation;
+use axum::Json;
+use axum::extract::State;
+use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
+use serde::Deserialize;
+use utoipa::ToSchema;
 
 #[derive(Deserialize, ToSchema)]
 pub struct RegistrationBody {
     pub email: String,
     pub username: String,
-    pub password: String
+    pub password: String,
 }
 
 #[utoipa::path(
@@ -51,7 +51,7 @@ pub async fn register(
     {
         return Err(ApiError::UsernameExists);
     }
-    
+
     if !validation::username(user.username.clone()) {
         return Err(ApiError::InvalidUsername);
     }

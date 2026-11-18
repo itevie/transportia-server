@@ -1,7 +1,7 @@
+use crate::db::resource::favourite::favourite_group_def::FavouritesGroup;
 use serde::Deserialize;
 use sqlx::{PgPool, Postgres, QueryBuilder};
 use utoipa::{IntoParams, ToSchema};
-use crate::db::resource::favourite::favourite_group_def::FavouritesGroup;
 
 pub static SQL_FAVOURITES_GROUPS: &str = r#"
 CREATE TABLE IF NOT EXISTS favourites_groups (
@@ -31,10 +31,7 @@ impl FavouriteGroups {
         Self { pool }
     }
 
-    pub async fn get(
-        &self,
-        id: i64,
-    ) -> sqlx::Result<Option<FavouritesGroup>> {
+    pub async fn get(&self, id: i64) -> sqlx::Result<Option<FavouritesGroup>> {
         sqlx::query_as::<_, FavouritesGroup>(
             r#"
             SELECT *
@@ -42,9 +39,9 @@ impl FavouriteGroups {
             WHERE id = $1
             "#,
         )
-            .bind(id)
-            .fetch_optional(&self.pool)
-            .await
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
     }
 
     pub async fn search(
@@ -52,16 +49,12 @@ impl FavouriteGroups {
         query: &FavouriteGroupQuery,
         owner_id: i64,
     ) -> sqlx::Result<Vec<FavouritesGroup>> {
-        let page_length = query
-            .page_length
-            .unwrap_or(50)
-            .clamp(1, 1000);
+        let page_length = query.page_length.unwrap_or(50).clamp(1, 1000);
 
         let offset = query.offset.unwrap_or(0).max(0);
 
-        let mut builder = QueryBuilder::<Postgres>::new(
-            "SELECT * FROM favourites_groups WHERE owner_id = ",
-        );
+        let mut builder =
+            QueryBuilder::<Postgres>::new("SELECT * FROM favourites_groups WHERE owner_id = ");
 
         builder.push_bind(owner_id);
 
@@ -108,18 +101,15 @@ impl FavouriteGroups {
             RETURNING id
             "#,
         )
-            .bind(favourite_type)
-            .bind(owner_id)
-            .bind(name)
-            .bind(created_at)
-            .fetch_one(&self.pool)
-            .await
+        .bind(favourite_type)
+        .bind(owner_id)
+        .bind(name)
+        .bind(created_at)
+        .fetch_one(&self.pool)
+        .await
     }
 
-    pub async fn update(
-        &self,
-        group: &FavouritesGroup,
-    ) -> sqlx::Result<bool> {
+    pub async fn update(&self, group: &FavouritesGroup) -> sqlx::Result<bool> {
         let result = sqlx::query(
             r#"
             UPDATE favourites_groups SET
@@ -128,24 +118,19 @@ impl FavouriteGroups {
             WHERE id = $3
             "#,
         )
-            .bind(group.favourite_type)
-            .bind(&group.name)
-            .bind(group.id)
-            .execute(&self.pool)
-            .await?;
+        .bind(group.favourite_type)
+        .bind(&group.name)
+        .bind(group.id)
+        .execute(&self.pool)
+        .await?;
 
         Ok(result.rows_affected() > 0)
     }
 
-    pub async fn delete(
-        &self,
-        id: i64,
-    ) -> sqlx::Result<bool> {
+    pub async fn delete(&self, id: i64) -> sqlx::Result<bool> {
         // TODO: Remove this group from favourites before deleting it.
 
-        let result = sqlx::query(
-            "DELETE FROM favourites_groups WHERE id = $1",
-        )
+        let result = sqlx::query("DELETE FROM favourites_groups WHERE id = $1")
             .bind(id)
             .execute(&self.pool)
             .await?;

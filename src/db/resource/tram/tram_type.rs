@@ -1,5 +1,5 @@
-use sqlx::{query_as, query_scalar, PgPool};
 use crate::db::resource::tram::tram_type_def::TramType;
+use sqlx::{PgPool, query_as, query_scalar};
 
 pub static SQL_TRAM_TYPE: &str = r#"
 CREATE TABLE IF NOT EXISTS tram_type (
@@ -26,9 +26,9 @@ impl TramTypes {
             WHERE id = $1
             "#,
         )
-            .bind(id)
-            .fetch_optional(&self.pool)
-            .await
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
     }
 
     pub async fn search(&self, query: &str) -> Result<Vec<TramType>, sqlx::Error> {
@@ -43,9 +43,9 @@ impl TramTypes {
             LIMIT 50
             "#,
         )
-            .bind(search)
-            .fetch_all(&self.pool)
-            .await
+        .bind(search)
+        .fetch_all(&self.pool)
+        .await
     }
 
     pub async fn create(&self, tram_type: &TramType) -> Result<i64, sqlx::Error> {
@@ -56,9 +56,9 @@ impl TramTypes {
             RETURNING id
             "#,
         )
-            .bind(&tram_type.name)
-            .fetch_one(&self.pool)
-            .await
+        .bind(&tram_type.name)
+        .fetch_one(&self.pool)
+        .await
     }
 
     pub async fn update(&self, tram_type: &TramType) -> Result<(), sqlx::Error> {
@@ -69,10 +69,10 @@ impl TramTypes {
             WHERE id = $2
             "#,
         )
-            .bind(&tram_type.name)
-            .bind(tram_type.id)
-            .execute(&self.pool)
-            .await?;
+        .bind(&tram_type.name)
+        .bind(tram_type.id)
+        .execute(&self.pool)
+        .await?;
 
         if updated.rows_affected() == 0 {
             return Err(sqlx::Error::RowNotFound);
@@ -82,9 +82,7 @@ impl TramTypes {
     }
 
     pub async fn delete(&self, id: i64) -> Result<(), sqlx::Error> {
-        sqlx::query(
-            "DELETE FROM tram_type WHERE id = $1",
-        )
+        sqlx::query("DELETE FROM tram_type WHERE id = $1")
             .bind(id)
             .execute(&self.pool)
             .await?;

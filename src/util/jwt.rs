@@ -1,6 +1,6 @@
-use std::time::{SystemTime, UNIX_EPOCH};
-use serde::{Deserialize, Serialize};
 use crate::db::resource::user::def::User;
+use serde::{Deserialize, Serialize};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Serialize, Deserialize)]
 pub struct JwtClaims {
@@ -12,7 +12,8 @@ pub fn create_jwt(user: User, secret: &str) -> jsonwebtoken::errors::Result<Stri
     let exp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap()
-        .as_secs() + 60 * 60 * 24 * 7;
+        .as_secs()
+        + 60 * 60 * 24 * 7;
 
     let claims = JwtClaims {
         sub: user.id,

@@ -1,10 +1,10 @@
-use axum::Router;
 use crate::http::HttpState;
+use axum::Router;
 
-pub mod registration;
-pub mod query;
-pub mod validation;
 pub mod login;
+pub mod query;
+pub mod registration;
+pub mod validation;
 
 pub fn routes() -> Router<HttpState> {
     Router::new()

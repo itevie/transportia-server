@@ -90,15 +90,12 @@ impl ModelBuses {
             WHERE id = $1
             "#,
         )
-            .bind(id)
-            .fetch_optional(&self.pool)
-            .await
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
     }
 
-    pub async fn search(
-        &self,
-        query: &ModelBusQuery,
-    ) -> sqlx::Result<Vec<ModelBus>> {
+    pub async fn search(&self, query: &ModelBusQuery) -> sqlx::Result<Vec<ModelBus>> {
         let page_length = query.page_length.unwrap_or(50).clamp(1, 1000);
         let offset = query.offset.unwrap_or(0).max(0);
 
@@ -118,9 +115,7 @@ impl ModelBuses {
         }
 
         if let Some(value) = query.scale {
-            builder
-                .push(" AND mb.scale = ")
-                .push_bind(value);
+            builder.push(" AND mb.scale = ").push_bind(value);
         }
 
         if let Some(value) = &query.operator {
@@ -130,9 +125,7 @@ impl ModelBuses {
         }
 
         if let Some(value) = &query.operator_link {
-            builder
-                .push(" AND mb.operator_link = ")
-                .push_bind(value);
+            builder.push(" AND mb.operator_link = ").push_bind(value);
         }
 
         if let Some(value) = &query.livery {
@@ -142,9 +135,7 @@ impl ModelBuses {
         }
 
         if let Some(value) = query.livery_link {
-            builder
-                .push(" AND mb.livery_link = ")
-                .push_bind(value);
+            builder.push(" AND mb.livery_link = ").push_bind(value);
         }
 
         if let Some(value) = &query.fleet_number {
@@ -160,9 +151,7 @@ impl ModelBuses {
         }
 
         if let Some(value) = query.vehicle_link {
-            builder
-                .push(" AND mb.vehicle_link = ")
-                .push_bind(value);
+            builder.push(" AND mb.vehicle_link = ").push_bind(value);
         }
 
         if let Some(value) = &query.route_number {
@@ -178,9 +167,7 @@ impl ModelBuses {
         }
 
         if let Some(value) = &query.route_link {
-            builder
-                .push(" AND mb.route_link = ")
-                .push_bind(value);
+            builder.push(" AND mb.route_link = ").push_bind(value);
         }
 
         if let Some(value) = &query.vehicle_type {
@@ -196,15 +183,11 @@ impl ModelBuses {
         }
 
         if let Some(value) = query.has_certificate {
-            builder
-                .push(" AND mb.has_certificate = ")
-                .push_bind(value);
+            builder.push(" AND mb.has_certificate = ").push_bind(value);
         }
 
         if let Some(value) = &query.released {
-            builder
-                .push(" AND mb.released = ")
-                .push_bind(value);
+            builder.push(" AND mb.released = ").push_bind(value);
         }
 
         if let Some(has_image) = query.has_image {
@@ -409,28 +392,28 @@ impl ModelBuses {
             RETURNING id
             "#,
         )
-            .bind(&model_bus.product_code)
-            .bind(&model_bus.manufacturer)
-            .bind(model_bus.scale)
-            .bind(&model_bus.operator)
-            .bind(&model_bus.operator_link)
-            .bind(&model_bus.livery)
-            .bind(model_bus.livery_link)
-            .bind(&model_bus.fleet_number)
-            .bind(&model_bus.registration)
-            .bind(model_bus.vehicle_link)
-            .bind(&model_bus.route_number)
-            .bind(&model_bus.destination)
-            .bind(&model_bus.route_link)
-            .bind(&model_bus.vehicle_type)
-            .bind(model_bus.vehicle_type_link)
-            .bind(model_bus.has_certificate)
-            .bind(model_bus.certificate_max)
-            .bind(&model_bus.released)
-            .bind(&model_bus.created_at)
-            .bind(&model_bus.updated_at)
-            .fetch_one(&self.pool)
-            .await
+        .bind(&model_bus.product_code)
+        .bind(&model_bus.manufacturer)
+        .bind(model_bus.scale)
+        .bind(&model_bus.operator)
+        .bind(&model_bus.operator_link)
+        .bind(&model_bus.livery)
+        .bind(model_bus.livery_link)
+        .bind(&model_bus.fleet_number)
+        .bind(&model_bus.registration)
+        .bind(model_bus.vehicle_link)
+        .bind(&model_bus.route_number)
+        .bind(&model_bus.destination)
+        .bind(&model_bus.route_link)
+        .bind(&model_bus.vehicle_type)
+        .bind(model_bus.vehicle_type_link)
+        .bind(model_bus.has_certificate)
+        .bind(model_bus.certificate_max)
+        .bind(&model_bus.released)
+        .bind(&model_bus.created_at)
+        .bind(&model_bus.updated_at)
+        .fetch_one(&self.pool)
+        .await
     }
 
     pub async fn upsert(&self, model_bus: &ModelBus) -> sqlx::Result<()> {
@@ -485,29 +468,29 @@ impl ModelBuses {
                 updated_at = EXCLUDED.updated_at
             "#,
         )
-            .bind(model_bus.id)
-            .bind(&model_bus.product_code)
-            .bind(&model_bus.manufacturer)
-            .bind(model_bus.scale)
-            .bind(&model_bus.operator)
-            .bind(&model_bus.operator_link)
-            .bind(&model_bus.livery)
-            .bind(model_bus.livery_link)
-            .bind(&model_bus.fleet_number)
-            .bind(&model_bus.registration)
-            .bind(model_bus.vehicle_link)
-            .bind(&model_bus.route_number)
-            .bind(&model_bus.destination)
-            .bind(&model_bus.route_link)
-            .bind(&model_bus.vehicle_type)
-            .bind(model_bus.vehicle_type_link)
-            .bind(model_bus.has_certificate)
-            .bind(model_bus.certificate_max)
-            .bind(&model_bus.released)
-            .bind(&model_bus.created_at)
-            .bind(&model_bus.updated_at)
-            .execute(&self.pool)
-            .await?;
+        .bind(model_bus.id)
+        .bind(&model_bus.product_code)
+        .bind(&model_bus.manufacturer)
+        .bind(model_bus.scale)
+        .bind(&model_bus.operator)
+        .bind(&model_bus.operator_link)
+        .bind(&model_bus.livery)
+        .bind(model_bus.livery_link)
+        .bind(&model_bus.fleet_number)
+        .bind(&model_bus.registration)
+        .bind(model_bus.vehicle_link)
+        .bind(&model_bus.route_number)
+        .bind(&model_bus.destination)
+        .bind(&model_bus.route_link)
+        .bind(&model_bus.vehicle_type)
+        .bind(model_bus.vehicle_type_link)
+        .bind(model_bus.has_certificate)
+        .bind(model_bus.certificate_max)
+        .bind(&model_bus.released)
+        .bind(&model_bus.created_at)
+        .bind(&model_bus.updated_at)
+        .execute(&self.pool)
+        .await?;
 
         Ok(())
     }

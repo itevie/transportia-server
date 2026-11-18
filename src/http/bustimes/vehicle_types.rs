@@ -1,10 +1,10 @@
-use axum::extract::{Path, Query, State};
+use crate::db::resource::bustimes::vehicle_type_def::BtVehicleType;
+use crate::http::HttpState;
+use crate::http::errors::ApiError;
 use axum::Json;
+use axum::extract::{Path, Query, State};
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
-use crate::db::resource::bustimes::vehicle_type_def::BtVehicleType;
-use crate::http::errors::ApiError;
-use crate::http::HttpState;
 
 #[derive(Deserialize, ToSchema, IntoParams)]
 pub struct VehicleTypeSearch {

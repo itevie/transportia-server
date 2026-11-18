@@ -1,12 +1,12 @@
-use axum::extract::{Query, State};
-use axum::http::StatusCode;
-use axum::Json;
-use axum::response::{IntoResponse, Response};
-use crate::db::resource::favourite::favourite_group::{FavouriteGroupQuery};
+use crate::db::resource::favourite::favourite_group::FavouriteGroupQuery;
 use crate::db::resource::favourite::favourite_group_def::FavouritesGroup;
 use crate::extractors::authenticator::AuthUser;
-use crate::http::errors::ApiError;
 use crate::http::HttpState;
+use crate::http::errors::ApiError;
+use axum::Json;
+use axum::extract::{Query, State};
+use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
 
 #[utoipa::path(
     get,

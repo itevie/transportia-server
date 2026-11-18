@@ -1,11 +1,15 @@
-use std::sync::Arc;
 use crate::db::Database;
 use crate::db::resource::checklist::checklist_def::RouteChecklist;
 use crate::db::resource::favourite::favourite_group_def::FavouritesGroup;
 use crate::db::resource::photo::photo_def::Photo;
 use crate::http::errors::ApiError;
+use std::sync::Arc;
 
-pub async fn check_route_checklist(db: Arc<Database>, checklist_id: i64, user_id: i64) -> Result<RouteChecklist, ApiError> {
+pub async fn check_route_checklist(
+    db: Arc<Database>,
+    checklist_id: i64,
+    user_id: i64,
+) -> Result<RouteChecklist, ApiError> {
     let checklist = db
         .route_checklists
         .get(checklist_id)
@@ -18,11 +22,15 @@ pub async fn check_route_checklist(db: Arc<Database>, checklist_id: i64, user_id
             "You do not own this checklist".to_string(),
         ));
     }
-    
+
     Ok(checklist)
 }
 
-pub async fn check_favourites_group(db: Arc<Database>, favourites_group_id: i64, user_id: i64) -> Result<FavouritesGroup, ApiError> {
+pub async fn check_favourites_group(
+    db: Arc<Database>,
+    favourites_group_id: i64,
+    user_id: i64,
+) -> Result<FavouritesGroup, ApiError> {
     let group = db
         .favourites_groups
         .get(favourites_group_id)
@@ -39,7 +47,11 @@ pub async fn check_favourites_group(db: Arc<Database>, favourites_group_id: i64,
     Ok(group)
 }
 
-pub async fn check_photo(db: Arc<Database>, photo_id: i64, user_id: i64) -> Result<Photo, ApiError> {
+pub async fn check_photo(
+    db: Arc<Database>,
+    photo_id: i64,
+    user_id: i64,
+) -> Result<Photo, ApiError> {
     let photo = db
         .photos
         .get(photo_id)
@@ -62,14 +74,20 @@ pub async fn is_trusted_user(db: Arc<Database>, user_id: i64) -> Result<bool, Ap
         .get(user_id, false)
         .await
         .map_err(|e| ApiError::Database(e.to_string()))?;
-    
+
     match user {
-        Some(val) => if !val.trusted_user {
-            Err(ApiError::Unauthorized("You must be a trusted user to do this!".to_string()))
-        } else {
-            Ok(true)
-        },
-        None => Err(ApiError::Unauthorized("You must be a trusted user to do this!".to_string()))
+        Some(val) => {
+            if !val.trusted_user {
+                Err(ApiError::Unauthorized(
+                    "You must be a trusted user to do this!".to_string(),
+                ))
+            } else {
+                Ok(true)
+            }
+        }
+        None => Err(ApiError::Unauthorized(
+            "You must be a trusted user to do this!".to_string(),
+        )),
     }
 }
 
@@ -81,11 +99,17 @@ pub async fn is_admin(db: Arc<Database>, user_id: i64) -> Result<bool, ApiError>
         .map_err(|e| ApiError::Database(e.to_string()))?;
 
     match user {
-        Some(val) => if !val.admin {
-            Err(ApiError::Unauthorized("You must be an admin to do this!".to_string()))
-        } else {
-            Ok(true)
-        },
-        None => Err(ApiError::Unauthorized("You must be an admin to do this!".to_string()))
+        Some(val) => {
+            if !val.admin {
+                Err(ApiError::Unauthorized(
+                    "You must be an admin to do this!".to_string(),
+                ))
+            } else {
+                Ok(true)
+            }
+        }
+        None => Err(ApiError::Unauthorized(
+            "You must be an admin to do this!".to_string(),
+        )),
     }
 }

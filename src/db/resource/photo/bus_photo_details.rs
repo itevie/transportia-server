@@ -5,7 +5,9 @@ use sqlx::PgPool;
 use crate::db::Database;
 use crate::db::resource::bustimes::vehicle::BtVehicles;
 use crate::db::resource::bustimes::vehicle_def::FilledOutBtVehicle;
-use crate::db::resource::photo::bus_photo_details_def::{BusPhotoDetails, BusPhotoDetailsFilledOut, BusPhotoDetailsUpdate};
+use crate::db::resource::photo::bus_photo_details_def::{
+    BusPhotoDetails, BusPhotoDetailsFilledOut, BusPhotoDetailsUpdate,
+};
 
 // TODO: Add manual operator
 pub static SQL_BUS_PHOTO_DETAILS: &str = r#"
@@ -31,10 +33,7 @@ impl BusPhotoDetailsManager {
         Self { pool }
     }
 
-    pub async fn get(
-        &self,
-        id: i64,
-    ) -> sqlx::Result<Option<BusPhotoDetails>> {
+    pub async fn get(&self, id: i64) -> sqlx::Result<Option<BusPhotoDetails>> {
         sqlx::query_as::<_, BusPhotoDetails>(
             r#"
             SELECT
@@ -50,15 +49,12 @@ impl BusPhotoDetailsManager {
             WHERE id = $1
             "#,
         )
-            .bind(id)
-            .fetch_optional(&self.pool)
-            .await
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
     }
 
-    pub async fn create(
-        &self,
-        details: &BusPhotoDetails,
-    ) -> sqlx::Result<i64> {
+    pub async fn create(&self, details: &BusPhotoDetails) -> sqlx::Result<i64> {
         sqlx::query_scalar::<_, i64>(
             r#"
             INSERT INTO bus_photo_details (
@@ -74,22 +70,18 @@ impl BusPhotoDetailsManager {
             RETURNING id
             "#,
         )
-            .bind(details.matched_vehicle_id)
-            .bind(details.override_match)
-            .bind(&details.reg)
-            .bind(&details.fleet)
-            .bind(details.livery_id)
-            .bind(details.vehicle_type_id)
-            .bind(&details.route_id)
-            .fetch_one(&self.pool)
-            .await
+        .bind(details.matched_vehicle_id)
+        .bind(details.override_match)
+        .bind(&details.reg)
+        .bind(&details.fleet)
+        .bind(details.livery_id)
+        .bind(details.vehicle_type_id)
+        .bind(&details.route_id)
+        .fetch_one(&self.pool)
+        .await
     }
 
-    pub async fn update(
-        &self,
-        id: i64,
-        update: &BusPhotoDetailsUpdate,
-    ) -> sqlx::Result<()> {
+    pub async fn update(&self, id: i64, update: &BusPhotoDetailsUpdate) -> sqlx::Result<()> {
         sqlx::query(
             r#"
             UPDATE bus_photo_details SET
@@ -103,24 +95,21 @@ impl BusPhotoDetailsManager {
             WHERE id = $8
             "#,
         )
-            .bind(update.matched_vehicle_id)
-            .bind(update.override_match)
-            .bind(&update.reg)
-            .bind(&update.fleet)
-            .bind(update.livery_id)
-            .bind(update.vehicle_type_id)
-            .bind(&update.route_id)
-            .bind(id)
-            .execute(&self.pool)
-            .await?;
+        .bind(update.matched_vehicle_id)
+        .bind(update.override_match)
+        .bind(&update.reg)
+        .bind(&update.fleet)
+        .bind(update.livery_id)
+        .bind(update.vehicle_type_id)
+        .bind(&update.route_id)
+        .bind(id)
+        .execute(&self.pool)
+        .await?;
 
         Ok(())
     }
 
-    pub async fn delete(
-        &self,
-        id: i64,
-    ) -> sqlx::Result<()> {
+    pub async fn delete(&self, id: i64) -> sqlx::Result<()> {
         sqlx::query("DELETE FROM bus_photo_details WHERE id = $1")
             .bind(id)
             .execute(&self.pool)
@@ -149,21 +138,13 @@ impl BusPhotoDetailsManager {
         };
 
         let matched: Option<FilledOutBtVehicle> = match details.matched_vehicle_id {
-            Some(id) => {
-                match db.vehicles.get(id).await? {
-                    Some(vehicle) => {
-                        BtVehicles::fill_out(
-                            db.clone(),
-                            vec![vehicle],
-                            None,
-                        )
-                            .await?
-                            .into_iter()
-                            .next()
-                    }
-                    None => None,
-                }
-            }
+            Some(id) => match db.vehicles.get(id).await? {
+                Some(vehicle) => BtVehicles::fill_out(db.clone(), vec![vehicle], None)
+                    .await?
+                    .into_iter()
+                    .next(),
+                None => None,
+            },
             None => None,
         };
 

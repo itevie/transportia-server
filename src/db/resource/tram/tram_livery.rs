@@ -1,5 +1,5 @@
-use sqlx::PgPool;
 use crate::db::resource::tram::tram_livery_def::TramLivery;
+use sqlx::PgPool;
 
 pub static SQL_TRAM_LIVERY: &str = r#"
 CREATE TABLE IF NOT EXISTS tram_livery (
@@ -28,9 +28,9 @@ impl TramLiveries {
             WHERE id = $1
             "#,
         )
-            .bind(id)
-            .fetch_optional(&self.pool)
-            .await
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
     }
 
     pub async fn search(&self, query: &str) -> sqlx::Result<Vec<TramLivery>> {
@@ -48,9 +48,9 @@ impl TramLiveries {
             LIMIT 50
             "#,
         )
-            .bind(search)
-            .fetch_all(&self.pool)
-            .await
+        .bind(search)
+        .fetch_all(&self.pool)
+        .await
     }
 
     pub async fn create(&self, livery: &TramLivery) -> sqlx::Result<i64> {
@@ -65,11 +65,11 @@ impl TramLiveries {
             RETURNING id
             "#,
         )
-            .bind(&livery.name)
-            .bind(&livery.css)
-            .bind(&livery.text_colour)
-            .fetch_one(&self.pool)
-            .await
+        .bind(&livery.name)
+        .bind(&livery.css)
+        .bind(&livery.text_colour)
+        .fetch_one(&self.pool)
+        .await
     }
 
     pub async fn update(&self, livery: &TramLivery) -> sqlx::Result<()> {
@@ -83,12 +83,12 @@ impl TramLiveries {
             WHERE id = $4
             "#,
         )
-            .bind(&livery.name)
-            .bind(&livery.css)
-            .bind(&livery.text_colour)
-            .bind(livery.id)
-            .execute(&self.pool)
-            .await?;
+        .bind(&livery.name)
+        .bind(&livery.css)
+        .bind(&livery.text_colour)
+        .bind(livery.id)
+        .execute(&self.pool)
+        .await?;
 
         if updated.rows_affected() == 0 {
             return Err(sqlx::Error::RowNotFound);

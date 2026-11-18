@@ -1,24 +1,24 @@
-pub mod fetchers;
+mod auth;
+mod bods;
 pub mod db;
+mod extractors;
+pub mod fetchers;
 pub mod http;
 pub mod util;
-mod extractors;
-mod bods;
-mod auth;
 
-use std::sync::Arc;
-use axum::extract::DefaultBodyLimit;
-use axum::http::{header, Method};
-use tower_http::compression::CompressionLayer;
-use tower_http::cors::{Any, CorsLayer};
-use tower_http::trace::TraceLayer;
-use tracing_subscriber::EnvFilter;
-use utoipa::OpenApi;
 use crate::bods::datafeed::BodsSiriVmClient;
 use crate::db::create_missing_comment_threads;
 use crate::db::resource::tram::tram_announcement_audio::TramAnnouncementAudios;
 use crate::fetchers::ttcdiecast::scrape_products;
 use crate::http::{ApiDoc, HttpState};
+use axum::extract::DefaultBodyLimit;
+use axum::http::{Method, header};
+use std::sync::Arc;
+use tower_http::compression::CompressionLayer;
+use tower_http::cors::{Any, CorsLayer};
+use tower_http::trace::TraceLayer;
+use tracing_subscriber::EnvFilter;
+use utoipa::OpenApi;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -41,7 +41,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match TramAnnouncementAudios::scan_tram_audios(db_arc.clone(), "./data/tram_audios").await {
         Ok(_) => println!("Scanned tram announcements!"),
-        Err(e) => eprintln!("Failed to scan tram announcements: {}", e.to_string())
+        Err(e) => eprintln!("Failed to scan tram announcements: {}", e.to_string()),
     };
 
     println!("Creating comment threads");
@@ -75,16 +75,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Method::DELETE,
             Method::OPTIONS,
         ])
-        .allow_headers([
-            header::CONTENT_TYPE,
-            header::AUTHORIZATION,
-        ]);
+        .allow_headers([header::CONTENT_TYPE, header::AUTHORIZATION]);
 
     let app = axum::Router::new()
         .merge(http::routes())
         .merge(
             utoipa_swagger_ui::SwaggerUi::new("/swagger-ui")
-                .url("/api-doc/openapi.json", ApiDoc::openapi())
+                .url("/api-doc/openapi.json", ApiDoc::openapi()),
         )
         .layer(cors)
         .layer(DefaultBodyLimit::max(25 * 1024 * 1024))
@@ -96,9 +93,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Server running on http://localhost:3000");
 
-
     axum::serve(listener, app).await?;
-
 
     Ok(())
 }

@@ -1,11 +1,11 @@
-use axum::extract::{Path, State};
-use axum::http::StatusCode;
-use axum::Json;
-use axum::response::{IntoResponse, Response};
 use crate::auth::quick::check_route_checklist;
 use crate::extractors::authenticator::AuthUser;
-use crate::http::errors::ApiError;
 use crate::http::HttpState;
+use crate::http::errors::ApiError;
+use axum::Json;
+use axum::extract::{Path, State};
+use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
 
 #[utoipa::path(
     post,
@@ -54,33 +54,28 @@ pub async fn create_route_checklist_item(
 ) -> Result<Response, ApiError> {
     check_route_checklist(state.db.clone(), checklist_id, user_id).await?;
 
-
-    let line = state.db.tx_lines.get(line_id.as_str())
+    let line = state
+        .db
+        .tx_lines
+        .get(line_id.as_str())
         .await
         .map_err(|_e| ApiError::NotFound(line_id.to_string()))?;
-    
+
     if let None = line {
         return Err(ApiError::NotFound(line_id.to_string()));
     }
-    
+
     let added_at = chrono::Utc::now().to_rfc3339();
 
     let _ = state
         .db
         .route_checklist_items
-        .create(
-            checklist_id,
-            &line_id,
-            &added_at,
-        )
+        .create(checklist_id, &line_id, &added_at)
         .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
-    Ok(
-        StatusCode::NO_CONTENT
-    .into_response())
+    Ok(StatusCode::NO_CONTENT.into_response())
 }
-
 
 #[utoipa::path(
     post,
@@ -129,9 +124,14 @@ pub async fn create_route_checklist_item_from_operators(
 ) -> Result<Response, ApiError> {
     check_route_checklist(state.db.clone(), checklist_id, user_id).await?;
 
-    let lines = state.db.tx_lines.get_by_national_operator_code(operator_id.as_str())
+    let lines = state
+        .db
+        .tx_lines
+        .get_by_national_operator_code(operator_id.as_str())
         .await
-        .map_err(|_e| ApiError::GenericServerError("Failed to fetch lines by operator".to_string()))?;
+        .map_err(|_e| {
+            ApiError::GenericServerError("Failed to fetch lines by operator".to_string())
+        })?;
 
     let added_at = chrono::Utc::now().to_rfc3339();
 
@@ -139,18 +139,12 @@ pub async fn create_route_checklist_item_from_operators(
         state
             .db
             .route_checklist_items
-            .create(
-                checklist_id,
-                &line.tx_id,
-                &added_at,
-            )
+            .create(checklist_id, &line.tx_id, &added_at)
             .await
             .map_err(|err| ApiError::Database(err.to_string()))?;
     }
 
-    Ok(
-        StatusCode::NO_CONTENT
-    .into_response())
+    Ok(StatusCode::NO_CONTENT.into_response())
 }
 
 #[utoipa::path(
@@ -214,20 +208,16 @@ pub async fn create_route_checklist_items_from_operators_bulk(
             .get_by_national_operator_code(&operator_id)
             .await
             .map_err(|_| {
-                ApiError::GenericServerError(
-                    format!("Failed to fetch lines for operator {operator_id}"),
-                )
+                ApiError::GenericServerError(format!(
+                    "Failed to fetch lines for operator {operator_id}"
+                ))
             })?;
 
         for line in lines {
             state
                 .db
                 .route_checklist_items
-                .create(
-                    checklist_id,
-                    &line.tx_id,
-                    &added_at,
-                )
+                .create(checklist_id, &line.tx_id, &added_at)
                 .await
                 .map_err(|err| ApiError::Database(err.to_string()))?;
         }
@@ -276,9 +266,9 @@ pub async fn count_lines_from_operators_bulk(
             .get_by_national_operator_code(&operator_id)
             .await
             .map_err(|_| {
-                ApiError::GenericServerError(
-                    format!("Failed to fetch lines for operator {operator_id}"),
-                )
+                ApiError::GenericServerError(format!(
+                    "Failed to fetch lines for operator {operator_id}"
+                ))
             })?;
 
         count += lines.len();
@@ -347,7 +337,14 @@ pub async fn complete_route_checklist_item(
     state
         .db
         .route_checklist_items
-        .set_completed(item.id, if let Some(_) = item.completed_at { None } else { Some(&completed_at) })
+        .set_completed(
+            item.id,
+            if let Some(_) = item.completed_at {
+                None
+            } else {
+                Some(&completed_at)
+            },
+        )
         .await
         .map_err(|e| ApiError::Database(e.to_string()))?;
 

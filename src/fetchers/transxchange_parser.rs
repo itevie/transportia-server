@@ -1,11 +1,11 @@
-use anyhow::{Context, Result};
-use chrono::Local;
-use quick_xml::de::from_reader;
-use serde::Deserialize;
 use crate::db::resource::transxchange::line_def::TxLine;
 use crate::db::resource::transxchange::operator_def::TxOperator;
 use crate::db::resource::transxchange::service_def::TxService;
 use crate::db::resource::transxchange::vehicle_journey_def::TxVehicleJourney;
+use anyhow::{Context, Result};
+use chrono::Local;
+use quick_xml::de::from_reader;
+use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 struct TransXChange {
@@ -297,9 +297,13 @@ struct EmptyElement {}
 
 pub fn parse_transxchange(
     xml: &[u8],
-) -> Result<(TxOperator, Vec<TxLine>, Vec<TxVehicleJourney>, Vec<TxService>)> {
-    let document: TransXChange =
-        from_reader(xml).context("Failed to parse TransXChange XML")?;
+) -> Result<(
+    TxOperator,
+    Vec<TxLine>,
+    Vec<TxVehicleJourney>,
+    Vec<TxService>,
+)> {
+    let document: TransXChange = from_reader(xml).context("Failed to parse TransXChange XML")?;
 
     let operator = document
         .operators
@@ -317,7 +321,7 @@ pub fn parse_transxchange(
             code: operator.code,
             short_name: operator.short_name,
             licence_number: operator.licence_number,
-            comment_thread: None
+            comment_thread: None,
         })?;
 
     let operator_code = operator.code.clone();
@@ -334,9 +338,7 @@ pub fn parse_transxchange(
     {
         let operational = journey.operational;
         let block = operational.as_ref().and_then(|o| o.block.as_ref());
-        let ticket_machine = operational
-            .as_ref()
-            .and_then(|o| o.ticket_machine.as_ref());
+        let ticket_machine = operational.as_ref().and_then(|o| o.ticket_machine.as_ref());
 
         let profile = journey.operating_profile.as_ref();
 
@@ -363,10 +365,8 @@ pub fn parse_transxchange(
             block_description: block.and_then(|b| b.description.clone()),
             block_number: block.and_then(|b| b.number.clone()),
 
-            ticket_machine_service_code: ticket_machine
-                .and_then(|t| t.service_code.clone()),
-            ticket_machine_journey_code: ticket_machine
-                .and_then(|t| t.journey_code.clone()),
+            ticket_machine_service_code: ticket_machine.and_then(|t| t.service_code.clone()),
+            ticket_machine_journey_code: ticket_machine.and_then(|t| t.journey_code.clone()),
 
             monday: days.and_then(|d| d.monday.as_ref()).is_some(),
             tuesday: days.and_then(|d| d.tuesday.as_ref()).is_some(),
@@ -414,12 +414,12 @@ pub fn parse_transxchange(
 
         if let Some(b) = bank_holidays {
             macro_rules! add_holiday {
-            ($field:ident) => {
-                if b.$field.is_some() {
-                    bank_holidays_non_operation.push(stringify!($field).to_string());
-                }
-            };
-        }
+                ($field:ident) => {
+                    if b.$field.is_some() {
+                        bank_holidays_non_operation.push(stringify!($field).to_string());
+                    }
+                };
+            }
 
             add_holiday!(christmas_day);
             add_holiday!(boxing_day);
@@ -447,7 +447,12 @@ pub fn parse_transxchange(
             .unwrap_or_default();
 
         tx_services.push(TxService {
-            id: format!("{}_{}_{}", service.service_code.clone(), operator_national_code.clone().unwrap_or("".to_string()), uuid::Uuid::new_v4()),
+            id: format!(
+                "{}_{}_{}",
+                service.service_code.clone(),
+                operator_national_code.clone().unwrap_or("".to_string()),
+                uuid::Uuid::new_v4()
+            ),
             service_code: service.service_code.clone(),
 
             start_date: period.and_then(|p| p.start_date.clone()),
@@ -461,21 +466,13 @@ pub fn parse_transxchange(
             saturday: days.and_then(|d| d.saturday.as_ref()).is_some(),
             sunday: days.and_then(|d| d.sunday.as_ref()).is_some(),
 
-            bank_holidays_non_operation: serde_json::to_string(
-                &bank_holidays_non_operation,
-            )?,
+            bank_holidays_non_operation: serde_json::to_string(&bank_holidays_non_operation)?,
 
-            special_days_of_operation: serde_json::to_string(
-                &special_days_of_operation,
-            )?,
+            special_days_of_operation: serde_json::to_string(&special_days_of_operation)?,
 
-            special_days_of_non_operation: serde_json::to_string(
-                &special_days_of_non_operation,
-            )?,
+            special_days_of_non_operation: serde_json::to_string(&special_days_of_non_operation)?,
 
-            serviced_organisation_refs: serde_json::to_string(
-                &serviced_organisation_refs,
-            )?,
+            serviced_organisation_refs: serde_json::to_string(&serviced_organisation_refs)?,
 
             operator: operator_national_code.clone(),
         });
@@ -488,12 +485,8 @@ pub fn parse_transxchange(
                 operator_national_code: operator_national_code.clone(),
                 line_id: line.id,
                 service_code: service.service_code.clone(),
-                outbound_description: line
-                    .outbound_description
-                    .map(|x| x.description),
-                inbound_description: line
-                    .inbound_description
-                    .map(|x| x.description),
+                outbound_description: line.outbound_description.map(|x| x.description),
+                inbound_description: line.inbound_description.map(|x| x.description),
             });
         }
     }

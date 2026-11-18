@@ -1,6 +1,5 @@
-
-use sqlx::PgPool;
 use crate::db::resource::tram::tram_stop_def::TramStop;
+use sqlx::PgPool;
 
 pub static SQL_TRAM_STOP: &str = r#"
 CREATE TABLE IF NOT EXISTS tram_stops (
@@ -29,9 +28,9 @@ impl TramStops {
             WHERE id = $1
             "#,
         )
-            .bind(id)
-            .fetch_optional(&self.pool)
-            .await
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
     }
 
     pub async fn search(&self, query: &str) -> sqlx::Result<Vec<TramStop>> {
@@ -46,9 +45,9 @@ impl TramStops {
             LIMIT 50
             "#,
         )
-            .bind(search)
-            .fetch_all(&self.pool)
-            .await
+        .bind(search)
+        .fetch_all(&self.pool)
+        .await
     }
 
     pub async fn create(&self, stop: &TramStop) -> sqlx::Result<i64> {
@@ -63,11 +62,11 @@ impl TramStops {
             RETURNING id
             "#,
         )
-            .bind(&stop.name)
-            .bind(stop.operator_id)
-            .bind(&stop.created_at)
-            .fetch_one(&self.pool)
-            .await
+        .bind(&stop.name)
+        .bind(stop.operator_id)
+        .bind(&stop.created_at)
+        .fetch_one(&self.pool)
+        .await
     }
 
     pub async fn update(&self, stop: &TramStop) -> sqlx::Result<()> {
@@ -81,12 +80,12 @@ impl TramStops {
             WHERE id = $4
             "#,
         )
-            .bind(&stop.name)
-            .bind(stop.operator_id)
-            .bind(&stop.created_at)
-            .bind(stop.id)
-            .execute(&self.pool)
-            .await?;
+        .bind(&stop.name)
+        .bind(stop.operator_id)
+        .bind(&stop.created_at)
+        .bind(stop.id)
+        .execute(&self.pool)
+        .await?;
 
         if result.rows_affected() == 0 {
             return Err(sqlx::Error::RowNotFound);

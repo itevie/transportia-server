@@ -1,8 +1,8 @@
+use crate::db::resource::model_bus::model_bus_def::ModelBusFilledOut;
+use crate::db::resource::photo::photo_def::Photo;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use utoipa::ToSchema;
-use crate::db::resource::model_bus::model_bus_def::ModelBusFilledOut;
-use crate::db::resource::photo::photo_def::Photo;
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, FromRow)]
 pub struct ModelBusOwnership {

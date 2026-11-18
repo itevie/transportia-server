@@ -1,15 +1,15 @@
-use axum::extract::{Path, State};
-use axum::http::StatusCode;
-use axum::Json;
-use axum::response::{IntoResponse, Response};
 use crate::auth::quick::check_route_checklist;
 use crate::db::resource::checklist::checklist::RouteChecklists;
 use crate::db::resource::checklist::checklist_def::RouteChecklist;
 use crate::db::resource::checklist::checklist_item::RouteChecklistItems;
 use crate::db::resource::checklist::checklist_item_def::RouteChecklistItem;
 use crate::extractors::authenticator::AuthUser;
-use crate::http::errors::ApiError;
 use crate::http::HttpState;
+use crate::http::errors::ApiError;
+use axum::Json;
+use axum::extract::{Path, State};
+use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
 
 #[utoipa::path(
     get,
@@ -32,7 +32,7 @@ use crate::http::HttpState;
 pub async fn get_route_checklist(
     State(state): State<HttpState>,
     Path(id): Path<i64>,
-    AuthUser { user_id }: AuthUser
+    AuthUser { user_id }: AuthUser,
 ) -> Result<Response, ApiError> {
     let item = check_route_checklist(state.db.clone(), id, user_id).await?;
 
@@ -97,7 +97,7 @@ pub async fn get_route_checklist_items(
 )]
 pub async fn get_route_checklists(
     State(state): State<HttpState>,
-    AuthUser { user_id }: AuthUser
+    AuthUser { user_id }: AuthUser,
 ) -> Result<Response, ApiError> {
     let items = state
         .db

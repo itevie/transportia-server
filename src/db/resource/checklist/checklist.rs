@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use sqlx::PgPool;
+use std::sync::Arc;
 
 use crate::db::Database;
 use crate::db::resource::checklist::checklist_def::{RouteChecklist, RouteChecklistFilledOut};
@@ -24,10 +24,7 @@ impl RouteChecklists {
         Self { pool }
     }
 
-    pub async fn get(
-        &self,
-        id: i64,
-    ) -> Result<Option<RouteChecklist>, sqlx::Error> {
+    pub async fn get(&self, id: i64) -> Result<Option<RouteChecklist>, sqlx::Error> {
         sqlx::query_as::<_, RouteChecklist>(
             r#"
             SELECT *
@@ -35,15 +32,12 @@ impl RouteChecklists {
             WHERE id = $1
             "#,
         )
-            .bind(id)
-            .fetch_optional(&self.pool)
-            .await
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
     }
 
-    pub async fn count_items(
-        &self,
-        checklist_id: i64,
-    ) -> Result<i64, sqlx::Error> {
+    pub async fn count_items(&self, checklist_id: i64) -> Result<i64, sqlx::Error> {
         sqlx::query_scalar(
             r#"
             SELECT COUNT(*)
@@ -51,15 +45,12 @@ impl RouteChecklists {
             WHERE checklist_id = $1
             "#,
         )
-            .bind(checklist_id)
-            .fetch_one(&self.pool)
-            .await
+        .bind(checklist_id)
+        .fetch_one(&self.pool)
+        .await
     }
 
-    pub async fn count_completed_items(
-        &self,
-        checklist_id: i64,
-    ) -> Result<i64, sqlx::Error> {
+    pub async fn count_completed_items(&self, checklist_id: i64) -> Result<i64, sqlx::Error> {
         sqlx::query_scalar(
             r#"
             SELECT COUNT(*)
@@ -68,15 +59,12 @@ impl RouteChecklists {
               AND completed_at IS NOT NULL
             "#,
         )
-            .bind(checklist_id)
-            .fetch_one(&self.pool)
-            .await
+        .bind(checklist_id)
+        .fetch_one(&self.pool)
+        .await
     }
 
-    pub async fn get_all(
-        &self,
-        owner_id: i64,
-    ) -> Result<Vec<RouteChecklist>, sqlx::Error> {
+    pub async fn get_all(&self, owner_id: i64) -> Result<Vec<RouteChecklist>, sqlx::Error> {
         sqlx::query_as::<_, RouteChecklist>(
             r#"
             SELECT *
@@ -85,15 +73,12 @@ impl RouteChecklists {
             ORDER BY id
             "#,
         )
-            .bind(owner_id)
-            .fetch_all(&self.pool)
-            .await
+        .bind(owner_id)
+        .fetch_all(&self.pool)
+        .await
     }
 
-    pub async fn get_by_owner(
-        &self,
-        owner_id: i64,
-    ) -> Result<Vec<RouteChecklist>, sqlx::Error> {
+    pub async fn get_by_owner(&self, owner_id: i64) -> Result<Vec<RouteChecklist>, sqlx::Error> {
         sqlx::query_as::<_, RouteChecklist>(
             r#"
             SELECT *
@@ -102,9 +87,9 @@ impl RouteChecklists {
             ORDER BY created_at DESC
             "#,
         )
-            .bind(owner_id)
-            .fetch_all(&self.pool)
-            .await
+        .bind(owner_id)
+        .fetch_all(&self.pool)
+        .await
     }
 
     pub async fn create(
@@ -126,18 +111,15 @@ impl RouteChecklists {
             RETURNING id
             "#,
         )
-            .bind(title)
-            .bind(description)
-            .bind(owner_id)
-            .bind(created_at)
-            .fetch_one(&self.pool)
-            .await
+        .bind(title)
+        .bind(description)
+        .bind(owner_id)
+        .bind(created_at)
+        .fetch_one(&self.pool)
+        .await
     }
 
-    pub async fn update(
-        &self,
-        checklist: &RouteChecklist,
-    ) -> Result<(), sqlx::Error> {
+    pub async fn update(&self, checklist: &RouteChecklist) -> Result<(), sqlx::Error> {
         sqlx::query(
             r#"
             UPDATE route_checklists
@@ -147,19 +129,17 @@ impl RouteChecklists {
             WHERE id = $3
             "#,
         )
-            .bind(&checklist.title)
-            .bind(&checklist.description)
-            .bind(checklist.id)
-            .execute(&self.pool)
-            .await?;
+        .bind(&checklist.title)
+        .bind(&checklist.description)
+        .bind(checklist.id)
+        .execute(&self.pool)
+        .await?;
 
         Ok(())
     }
 
     pub async fn delete(&self, id: i64) -> Result<(), sqlx::Error> {
-        sqlx::query(
-            "DELETE FROM route_checklists WHERE id = $1",
-        )
+        sqlx::query("DELETE FROM route_checklists WHERE id = $1")
             .bind(id)
             .execute(&self.pool)
             .await?;
@@ -174,10 +154,7 @@ impl RouteChecklists {
         let mut filled_out = Vec::with_capacity(checklists.len());
 
         for checklist in checklists {
-            let count = db
-                .route_checklists
-                .count_items(checklist.id)
-                .await?;
+            let count = db.route_checklists.count_items(checklist.id).await?;
 
             let completed_count = db
                 .route_checklists

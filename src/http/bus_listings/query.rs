@@ -1,10 +1,12 @@
-use axum::extract::{Path, Query, State};
-use axum::Json;
-use crate::db::resource::model_bus_listings::model_bus_listing::{BusListingQuery, BusListingQueryOptions};
+use crate::db::resource::model_bus_listings::model_bus_listing::{
+    BusListingQuery, BusListingQueryOptions,
+};
 use crate::db::resource::model_bus_listings::model_bus_listing_def::BusListingResource;
 use crate::extractors::optional_authenticator::OptionalAuthUser;
-use crate::http::errors::ApiError;
 use crate::http::HttpState;
+use crate::http::errors::ApiError;
+use axum::Json;
+use axum::extract::{Path, Query, State};
 
 pub async fn get_listings(
     State(state): State<HttpState>,

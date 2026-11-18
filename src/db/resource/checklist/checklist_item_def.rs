@@ -1,7 +1,7 @@
+use crate::db::resource::transxchange::line_def::TxLine;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use utoipa::ToSchema;
-use crate::db::resource::transxchange::line_def::TxLine;
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, FromRow)]
 pub struct RouteChecklistItem {
@@ -13,7 +13,6 @@ pub struct RouteChecklistItem {
     pub added_at: String,
     pub completed_at: Option<String>,
 }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, FromRow)]
 pub struct RouteChecklistItemFilledOut {

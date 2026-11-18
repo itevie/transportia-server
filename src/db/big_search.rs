@@ -9,8 +9,8 @@ use crate::db::resource::bustimes::vehicle_type_def::BtVehicleType;
 use crate::db::resource::transxchange::line::TxLineQuery;
 use crate::db::resource::transxchange::line_def::TxLine;
 use crate::db::resource::transxchange::operator_def::TxOperator;
-use crate::db::resource::user::def::User;
 use crate::db::resource::user::UserQuery;
+use crate::db::resource::user::def::User;
 
 #[derive(Clone, Serialize, Deserialize, ToSchema, IntoParams)]
 pub struct BigSearchResult {
@@ -21,10 +21,7 @@ pub struct BigSearchResult {
     pub liveries: Vec<BtLivery>,
 }
 
-pub async fn big_search(
-    db: Arc<Database>,
-    query: String,
-) -> Result<BigSearchResult, sqlx::Error> {
+pub async fn big_search(db: Arc<Database>, query: String) -> Result<BigSearchResult, sqlx::Error> {
     let users = db
         .users
         .search(&UserQuery {
@@ -34,10 +31,7 @@ pub async fn big_search(
         })
         .await?;
 
-    let operators = db
-        .tx_operators
-        .search(query.as_str())
-        .await?;
+    let operators = db.tx_operators.search(query.as_str()).await?;
 
     let routes = db
         .tx_lines
@@ -56,15 +50,9 @@ pub async fn big_search(
         })
         .await?;
 
-    let vehicle_types = db
-        .vehicle_types
-        .search(query.as_str())
-        .await?;
+    let vehicle_types = db.vehicle_types.search(query.as_str()).await?;
 
-    let liveries = db
-        .liveries
-        .search(query.as_str())
-        .await?;
+    let liveries = db.liveries.search(query.as_str()).await?;
 
     Ok(BigSearchResult {
         users,

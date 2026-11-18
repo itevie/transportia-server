@@ -1,17 +1,17 @@
-use axum::extract::{Path, Query, State};
-use axum::http::StatusCode;
-use axum::Json;
-use axum::response::{IntoResponse, Response};
-use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 use crate::auth::quick::is_trusted_user;
 use crate::db;
 use crate::db::resource::bustimes::vehicle::{BtVehicleQuery, BtVehicles};
 use crate::db::resource::bustimes::vehicle_def::FilledOutBtVehicle;
 use crate::extractors::authenticator::AuthUser;
 use crate::extractors::optional_authenticator::OptionalAuthUser;
-use crate::http::errors::ApiError;
 use crate::http::HttpState;
+use crate::http::errors::ApiError;
+use axum::Json;
+use axum::extract::{Path, Query, State};
+use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
+use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 #[utoipa::path(
     get,
@@ -42,7 +42,7 @@ pub async fn search_vehicles(
         .search(&query)
         .await
         .map_err(|err| err.to_string())?;
-    
+
     let filled_out = BtVehicles::fill_out(state.db.clone(), listings, user.map(|x| x.user_id))
         .await
         .map_err(|err| err.to_string())?;
@@ -68,7 +68,7 @@ pub async fn search_vehicles(
             status = 404,
             description = "Vehicle not found"
         ),
-        (   
+        (
             status = 500,
             description = "Internal server error"
         )
@@ -87,11 +87,7 @@ pub async fn get_vehicle(
         .map_err(|err| err.to_string())?
         .ok_or_else(|| "Vehicle not found".to_string())?;
 
-    let filled_out = BtVehicles::fill_out(
-        state.db.clone(),
-        vec![vehicle],
-        user.map(|x| x.user_id)
-    )
+    let filled_out = BtVehicles::fill_out(state.db.clone(), vec![vehicle], user.map(|x| x.user_id))
         .await
         .map_err(|err| err.to_string())?
         .into_iter()

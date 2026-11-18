@@ -1,14 +1,12 @@
-
+use crate::bods::siri_vm::{ServiceDelivery, SiriResponse};
 use reqwest::Client;
-use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::time::Duration;
 use thiserror::Error;
 use utoipa::{IntoParams, ToSchema};
-use crate::bods::siri_vm::{ServiceDelivery, SiriResponse};
 
-const DATAFEED_URL: &str =
-    "https://data.bus-data.dft.gov.uk/api/v1/datafeed";
+const DATAFEED_URL: &str = "https://data.bus-data.dft.gov.uk/api/v1/datafeed";
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, ToSchema, IntoParams)]
 pub struct DatafeedQuery {
@@ -76,9 +74,7 @@ pub struct BodsSiriVmClient {
 
 impl BodsSiriVmClient {
     pub fn new(api_key: impl Into<String>) -> Result<Self, DatafeedError> {
-        let client = Client::builder()
-            .timeout(Duration::from_secs(30))
-            .build()?;
+        let client = Client::builder().timeout(Duration::from_secs(30)).build()?;
 
         Ok(Self {
             client,
@@ -94,9 +90,8 @@ impl BodsSiriVmClient {
                 let monitored = activity.monitored_vehicle_journey;
 
                 let extensions = activity.extensions;
-                let extension_journey = extensions
-                    .as_ref()
-                    .and_then(|e| e.vehicle_journey.as_ref());
+                let extension_journey =
+                    extensions.as_ref().and_then(|e| e.vehicle_journey.as_ref());
 
                 let ticket_machine = extension_journey
                     .and_then(|j| j.operational.as_ref())
@@ -106,39 +101,25 @@ impl BodsSiriVmClient {
                     .as_ref()
                     .and_then(|j| j.framed_vehicle_journey_ref.as_ref());
 
-                let location = monitored
-                    .as_ref()
-                    .and_then(|j| j.vehicle_location.as_ref());
+                let location = monitored.as_ref().and_then(|j| j.vehicle_location.as_ref());
 
                 journeys.push(VehicleJourney {
                     recorded_at_time: activity.recorded_at_time,
                     valid_untile_time: activity.valid_until_time,
 
                     line: monitored.as_ref().and_then(|j| j.line_ref.clone()),
-                    direction_ref: monitored
-                        .as_ref()
-                        .and_then(|j| j.direction_ref.clone()),
+                    direction_ref: monitored.as_ref().and_then(|j| j.direction_ref.clone()),
                     published_line_name: monitored
                         .as_ref()
                         .and_then(|j| j.published_line_name.clone()),
 
-                    operator: monitored
-                        .as_ref()
-                        .and_then(|j| j.operator_ref.clone()),
+                    operator: monitored.as_ref().and_then(|j| j.operator_ref.clone()),
 
-                    origin_ref: monitored
-                        .as_ref()
-                        .and_then(|j| j.origin_ref.clone()),
-                    origin_name: monitored
-                        .as_ref()
-                        .and_then(|j| j.origin_name.clone()),
+                    origin_ref: monitored.as_ref().and_then(|j| j.origin_ref.clone()),
+                    origin_name: monitored.as_ref().and_then(|j| j.origin_name.clone()),
 
-                    destination_ref: monitored
-                        .as_ref()
-                        .and_then(|j| j.destination_ref.clone()),
-                    destination: monitored
-                        .as_ref()
-                        .and_then(|j| j.destination_name.clone()),
+                    destination_ref: monitored.as_ref().and_then(|j| j.destination_ref.clone()),
+                    destination: monitored.as_ref().and_then(|j| j.destination_name.clone()),
 
                     origin_aimed_departure_time: monitored
                         .as_ref()
@@ -151,27 +132,20 @@ impl BodsSiriVmClient {
                     vehicle_location_latitude: location.map(|l| l.latitude),
                     bearing: monitored.as_ref().and_then(|j| j.bearing),
 
-                    vehicle: monitored
-                        .as_ref()
-                        .and_then(|j| j.vehicle_ref.clone()),
-                    block_ref: monitored
-                        .as_ref()
-                        .and_then(|j| j.block_ref.clone()),
+                    vehicle: monitored.as_ref().and_then(|j| j.vehicle_ref.clone()),
+                    block_ref: monitored.as_ref().and_then(|j| j.block_ref.clone()),
 
                     item_identifier: activity.item_identifier,
 
-                    data_frame_ref: framed_journey
-                        .and_then(|j| j.data_frame_ref.clone()),
+                    data_frame_ref: framed_journey.and_then(|j| j.data_frame_ref.clone()),
                     dated_vehicle_journey_ref: framed_journey
                         .and_then(|j| j.dated_vehicle_journey_ref.clone()),
 
-                    vehicle_unique_id: extension_journey
-                        .and_then(|j| j.vehicle_unique_id.clone()),
+                    vehicle_unique_id: extension_journey.and_then(|j| j.vehicle_unique_id.clone()),
 
                     ticket_machine_service_code: ticket_machine
                         .and_then(|t| t.ticket_machine_service_code.clone()),
-                    journey_code: ticket_machine
-                        .and_then(|t| t.journey_code.clone()),
+                    journey_code: ticket_machine.and_then(|t| t.journey_code.clone()),
                 });
             }
         }
@@ -188,9 +162,7 @@ impl BodsSiriVmClient {
             .get(DATAFEED_URL)
             .query(&[("api_key", self.api_key.as_str())]);
 
-        if let Some([min_lon, min_lat, max_lon, max_lat]) =
-            query.bounding_box
-        {
+        if let Some([min_lon, min_lat, max_lon, max_lat]) = query.bounding_box {
             request = request.query(&[
                 ("boundingBox", min_lon.to_string()),
                 ("boundingBox", min_lat.to_string()),
@@ -226,11 +198,10 @@ impl BodsSiriVmClient {
         let response = request.send().await?.error_for_status()?;
         let body = response.text().await?;
 
-        let siri: SiriResponse = quick_xml::de::from_str(&body)
-            .map_err(|err| {
-                eprintln!("BODS XML parsing failed: {err}");
-                DatafeedError::Xml(err.to_string())
-            })?;
+        let siri: SiriResponse = quick_xml::de::from_str(&body).map_err(|err| {
+            eprintln!("BODS XML parsing failed: {err}");
+            DatafeedError::Xml(err.to_string())
+        })?;
 
         Ok(siri.service_delivery)
     }

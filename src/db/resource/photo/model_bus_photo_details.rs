@@ -6,7 +6,9 @@ use crate::db::Database;
 use crate::db::resource::model_bus::model_bus::ModelBuses;
 use crate::db::resource::model_bus::model_bus_def::ModelBusFilledOut;
 use crate::db::resource::model_bus::model_bus_ownership::ModelBusOwnerships;
-use crate::db::resource::photo::model_bus_photo_details_def::{ModelBusPhotoDetails, ModelBusPhotoDetailsFilledOut, ModelBusPhotoDetailsUpdate};
+use crate::db::resource::photo::model_bus_photo_details_def::{
+    ModelBusPhotoDetails, ModelBusPhotoDetailsFilledOut, ModelBusPhotoDetailsUpdate,
+};
 
 pub static SQL_MODEL_BUS_PHOTO_DETAILS: &str = r#"
 CREATE TABLE IF NOT EXISTS model_bus_photo_details (
@@ -27,10 +29,7 @@ impl ModelBusPhotoDetailsManager {
         Self { pool }
     }
 
-    pub async fn get(
-        &self,
-        id: i64,
-    ) -> sqlx::Result<Option<ModelBusPhotoDetails>> {
+    pub async fn get(&self, id: i64) -> sqlx::Result<Option<ModelBusPhotoDetails>> {
         sqlx::query_as::<_, ModelBusPhotoDetails>(
             r#"
             SELECT
@@ -42,15 +41,12 @@ impl ModelBusPhotoDetailsManager {
             WHERE id = $1
             "#,
         )
-            .bind(id)
-            .fetch_optional(&self.pool)
-            .await
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
     }
 
-    pub async fn create(
-        &self,
-        details: &ModelBusPhotoDetails,
-    ) -> sqlx::Result<i64> {
+    pub async fn create(&self, details: &ModelBusPhotoDetails) -> sqlx::Result<i64> {
         sqlx::query_scalar::<_, i64>(
             r#"
             INSERT INTO model_bus_photo_details (
@@ -62,18 +58,14 @@ impl ModelBusPhotoDetailsManager {
             RETURNING id
             "#,
         )
-            .bind(details.matched_model_id)
-            .bind(details.ownership)
-            .bind(details.override_match)
-            .fetch_one(&self.pool)
-            .await
+        .bind(details.matched_model_id)
+        .bind(details.ownership)
+        .bind(details.override_match)
+        .fetch_one(&self.pool)
+        .await
     }
 
-    pub async fn update(
-        &self,
-        id: i64,
-        update: &ModelBusPhotoDetailsUpdate,
-    ) -> sqlx::Result<()> {
+    pub async fn update(&self, id: i64, update: &ModelBusPhotoDetailsUpdate) -> sqlx::Result<()> {
         sqlx::query(
             r#"
             UPDATE model_bus_photo_details SET
@@ -83,20 +75,17 @@ impl ModelBusPhotoDetailsManager {
             WHERE id = $4
             "#,
         )
-            .bind(update.matched_model_id)
-            .bind(update.ownership)
-            .bind(update.override_match)
-            .bind(id)
-            .execute(&self.pool)
-            .await?;
+        .bind(update.matched_model_id)
+        .bind(update.ownership)
+        .bind(update.override_match)
+        .bind(id)
+        .execute(&self.pool)
+        .await?;
 
         Ok(())
     }
 
-    pub async fn delete(
-        &self,
-        id: i64,
-    ) -> sqlx::Result<()> {
+    pub async fn delete(&self, id: i64) -> sqlx::Result<()> {
         sqlx::query("DELETE FROM model_bus_photo_details WHERE id = $1")
             .bind(id)
             .execute(&self.pool)
@@ -115,35 +104,21 @@ impl ModelBusPhotoDetailsManager {
         };
 
         let ownership_f = match ownership {
-            Some(ownership) => {
-                ModelBusOwnerships::fill_out(
-                    db.clone(),
-                    vec![ownership],
-                    None,
-                )
-                    .await?
-                    .into_iter()
-                    .next()
-            }
+            Some(ownership) => ModelBusOwnerships::fill_out(db.clone(), vec![ownership], None)
+                .await?
+                .into_iter()
+                .next(),
             None => None,
         };
 
         let matched: Option<ModelBusFilledOut> = match details.matched_model_id {
-            Some(id) => {
-                match db.model_buses.get(id).await? {
-                    Some(model_bus) => {
-                        ModelBuses::fill_out(
-                            db.clone(),
-                            vec![model_bus],
-                            None,
-                        )
-                            .await?
-                            .into_iter()
-                            .next()
-                    }
-                    None => None,
-                }
-            }
+            Some(id) => match db.model_buses.get(id).await? {
+                Some(model_bus) => ModelBuses::fill_out(db.clone(), vec![model_bus], None)
+                    .await?
+                    .into_iter()
+                    .next(),
+                None => None,
+            },
             None => None,
         };
 
@@ -164,9 +139,7 @@ impl ModelBusPhotoDetailsManager {
         let mut results = Vec::with_capacity(models.len());
 
         for model in models {
-            results.push(
-                Self::fill_out(db.clone(), model).await?
-            );
+            results.push(Self::fill_out(db.clone(), model).await?);
         }
 
         Ok(results)

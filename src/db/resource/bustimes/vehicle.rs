@@ -1,8 +1,7 @@
-
 use std::sync::Arc;
 
-use sqlx::{PgPool, Postgres, QueryBuilder};
 use serde::Deserialize;
+use sqlx::{PgPool, Postgres, QueryBuilder};
 use utoipa::{IntoParams, ToSchema};
 
 use crate::db::Database;
@@ -72,26 +71,20 @@ impl BtVehicles {
         Self { pool }
     }
 
-    pub async fn get(
-        &self,
-        id: i64,
-    ) -> sqlx::Result<Option<BtVehicle>> {
+    pub async fn get(&self, id: i64) -> sqlx::Result<Option<BtVehicle>> {
         sqlx::query_as::<_, BtVehicle>(
             r#"
             SELECT *
             FROM bt_vehicles
             WHERE id = $1
-            "#
+            "#,
         )
-            .bind(id)
-            .fetch_optional(&self.pool)
-            .await
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
     }
 
-    pub async fn search(
-        &self,
-        query: &BtVehicleQuery,
-    ) -> sqlx::Result<Vec<BtVehicle>> {
+    pub async fn search(&self, query: &BtVehicleQuery) -> sqlx::Result<Vec<BtVehicle>> {
         let page_length = query.page_length.unwrap_or(50).min(1000);
 
         let mut builder = QueryBuilder::<Postgres>::new(
@@ -103,7 +96,7 @@ impl BtVehicles {
             LEFT JOIN tx_operators o
                 ON o.id = v.operator_id
             WHERE TRUE
-            "#
+            "#,
         );
 
         if let Some(value) = query.slug.as_deref() {
@@ -131,21 +124,15 @@ impl BtVehicles {
         }
 
         if let Some(value) = query.vehicle_type_id {
-            builder
-                .push(" AND v.vehicle_type_id = ")
-                .push_bind(value);
+            builder.push(" AND v.vehicle_type_id = ").push_bind(value);
         }
 
         if let Some(value) = query.livery_id {
-            builder
-                .push(" AND v.livery_id = ")
-                .push_bind(value);
+            builder.push(" AND v.livery_id = ").push_bind(value);
         }
 
         if let Some(value) = query.operator_id.as_deref() {
-            builder
-                .push(" AND v.operator_id = ")
-                .push_bind(value);
+            builder.push(" AND v.operator_id = ").push_bind(value);
         }
 
         if let Some(value) = query.name.as_deref() {
@@ -155,45 +142,31 @@ impl BtVehicles {
         }
 
         if let Some(value) = query.withdrawn {
-            builder
-                .push(" AND v.withdrawn = ")
-                .push_bind(value);
+            builder.push(" AND v.withdrawn = ").push_bind(value);
         }
 
         if let Some(value) = query.electric {
-            builder
-                .push(" AND vt.electric = ")
-                .push_bind(value);
+            builder.push(" AND vt.electric = ").push_bind(value);
         }
 
         if let Some(value) = query.double_decker {
-            builder
-                .push(" AND vt.double_decker = ")
-                .push_bind(value);
+            builder.push(" AND vt.double_decker = ").push_bind(value);
         }
 
         if let Some(value) = query.coach {
-            builder
-                .push(" AND vt.coach = ")
-                .push_bind(value);
+            builder.push(" AND vt.coach = ").push_bind(value);
         }
 
         if let Some(value) = query.training_vehicle {
-            builder
-                .push(" AND v.training_vehicle = ")
-                .push_bind(value);
+            builder.push(" AND v.training_vehicle = ").push_bind(value);
         }
 
         if let Some(value) = query.demonstrator {
-            builder
-                .push(" AND v.demonstrator = ")
-                .push_bind(value);
+            builder.push(" AND v.demonstrator = ").push_bind(value);
         }
 
         if let Some(value) = query.open_top {
-            builder
-                .push(" AND v.open_top = ")
-                .push_bind(value);
+            builder.push(" AND v.open_top = ").push_bind(value);
         }
 
         if let Some(value) = query.has_image {
@@ -205,7 +178,7 @@ impl BtVehicles {
                         FROM bus_photo_details bpd
                         WHERE bpd.matched_vehicle_id = v.id
                     )
-                    "#
+                    "#,
                 );
             } else {
                 builder.push(
@@ -215,7 +188,7 @@ impl BtVehicles {
                         FROM bus_photo_details bpd
                         WHERE bpd.matched_vehicle_id = v.id
                     )
-                    "#
+                    "#,
                 );
             }
         }
@@ -223,47 +196,42 @@ impl BtVehicles {
         if let Some(value) = query.search.as_deref() {
             let search = format!("%{}%", value);
 
-            builder.push(
-                r#"
+            builder
+                .push(
+                    r#"
                 AND (
                     v.slug ILIKE
-                "#
-            ).push_bind(search.clone());
-
-            builder.push(" OR v.fleet ILIKE ")
+                "#,
+                )
                 .push_bind(search.clone());
 
-            builder.push(" OR v.reg ILIKE ")
+            builder.push(" OR v.fleet ILIKE ").push_bind(search.clone());
+
+            builder.push(" OR v.reg ILIKE ").push_bind(search.clone());
+
+            builder
+                .push(" OR v.previous_reg ILIKE ")
                 .push_bind(search.clone());
 
-            builder.push(" OR v.previous_reg ILIKE ")
+            builder.push(" OR v.name ILIKE ").push_bind(search.clone());
+
+            builder
+                .push(" OR o.short_name ILIKE ")
                 .push_bind(search.clone());
 
-            builder.push(" OR v.name ILIKE ")
-                .push_bind(search.clone());
+            builder.push(" OR o.code ILIKE ").push_bind(search.clone());
 
-            builder.push(" OR o.short_name ILIKE ")
-                .push_bind(search.clone());
-
-            builder.push(" OR o.code ILIKE ")
-                .push_bind(search.clone());
-
-            builder.push(" OR o.national_code ILIKE ")
-                .push_bind(search);
+            builder.push(" OR o.national_code ILIKE ").push_bind(search);
 
             builder.push(")");
         }
 
         builder.push(" ORDER BY v.name");
 
-        builder
-            .push(" LIMIT ")
-            .push_bind(page_length);
+        builder.push(" LIMIT ").push_bind(page_length);
 
         if let Some(offset) = query.offset {
-            builder
-                .push(" OFFSET ")
-                .push_bind(offset);
+            builder.push(" OFFSET ").push_bind(offset);
         }
 
         builder
@@ -272,10 +240,7 @@ impl BtVehicles {
             .await
     }
 
-    pub async fn create(
-        &self,
-        vehicle: &BtVehicle,
-    ) -> sqlx::Result<()> {
+    pub async fn create(&self, vehicle: &BtVehicle) -> sqlx::Result<()> {
         sqlx::query(
             r#"
             INSERT INTO bt_vehicles (
@@ -301,35 +266,32 @@ impl BtVehicles {
                 $1, $2, $3, $4, $5, $6, $7, $8, $9,
                 $10, $11, $12, $13, $14, $15, $16, $17
             )
-            "#
+            "#,
         )
-            .bind(vehicle.id)
-            .bind(&vehicle.slug)
-            .bind(&vehicle.fleet)
-            .bind(&vehicle.reg)
-            .bind(&vehicle.previous_reg)
-            .bind(vehicle.vehicle_type_id)
-            .bind(vehicle.livery_id)
-            .bind(&vehicle.branding)
-            .bind(&vehicle.operator_id)
-            .bind(&vehicle.garage_id)
-            .bind(&vehicle.name)
-            .bind(&vehicle.notes)
-            .bind(vehicle.withdrawn)
-            .bind(vehicle.training_vehicle)
-            .bind(vehicle.demonstrator)
-            .bind(vehicle.open_top)
-            .bind(vehicle.comment_thread)
-            .execute(&self.pool)
-            .await?;
+        .bind(vehicle.id)
+        .bind(&vehicle.slug)
+        .bind(&vehicle.fleet)
+        .bind(&vehicle.reg)
+        .bind(&vehicle.previous_reg)
+        .bind(vehicle.vehicle_type_id)
+        .bind(vehicle.livery_id)
+        .bind(&vehicle.branding)
+        .bind(&vehicle.operator_id)
+        .bind(&vehicle.garage_id)
+        .bind(&vehicle.name)
+        .bind(&vehicle.notes)
+        .bind(vehicle.withdrawn)
+        .bind(vehicle.training_vehicle)
+        .bind(vehicle.demonstrator)
+        .bind(vehicle.open_top)
+        .bind(vehicle.comment_thread)
+        .execute(&self.pool)
+        .await?;
 
         Ok(())
     }
 
-    pub async fn upsert(
-        &self,
-        vehicle: &BtVehicle,
-    ) -> sqlx::Result<()> {
+    pub async fn upsert(&self, vehicle: &BtVehicle) -> sqlx::Result<()> {
         sqlx::query(
             r#"
             INSERT INTO bt_vehicles (
@@ -372,36 +334,33 @@ impl BtVehicles {
                 demonstrator = EXCLUDED.demonstrator,
                 open_top = EXCLUDED.open_top,
                 comment_thread = EXCLUDED.comment_thread
-            "#
+            "#,
         )
-            .bind(vehicle.id)
-            .bind(&vehicle.slug)
-            .bind(&vehicle.fleet)
-            .bind(&vehicle.reg)
-            .bind(&vehicle.previous_reg)
-            .bind(vehicle.vehicle_type_id)
-            .bind(vehicle.livery_id)
-            .bind(&vehicle.branding)
-            .bind(&vehicle.operator_id)
-            .bind(&vehicle.garage_id)
-            .bind(&vehicle.name)
-            .bind(&vehicle.notes)
-            .bind(vehicle.withdrawn)
-            .bind(vehicle.training_vehicle)
-            .bind(vehicle.demonstrator)
-            .bind(vehicle.open_top)
-            .bind(vehicle.comment_thread)
-            .execute(&self.pool)
-            .await?;
+        .bind(vehicle.id)
+        .bind(&vehicle.slug)
+        .bind(&vehicle.fleet)
+        .bind(&vehicle.reg)
+        .bind(&vehicle.previous_reg)
+        .bind(vehicle.vehicle_type_id)
+        .bind(vehicle.livery_id)
+        .bind(&vehicle.branding)
+        .bind(&vehicle.operator_id)
+        .bind(&vehicle.garage_id)
+        .bind(&vehicle.name)
+        .bind(&vehicle.notes)
+        .bind(vehicle.withdrawn)
+        .bind(vehicle.training_vehicle)
+        .bind(vehicle.demonstrator)
+        .bind(vehicle.open_top)
+        .bind(vehicle.comment_thread)
+        .execute(&self.pool)
+        .await?;
 
         Ok(())
     }
 
     /// Upserts only BusTimes data, preserving Transportia-specific fields.
-    pub async fn upsert_bustimes(
-        &self,
-        vehicle: &BtVehicle,
-    ) -> sqlx::Result<()> {
+    pub async fn upsert_bustimes(&self, vehicle: &BtVehicle) -> sqlx::Result<()> {
         sqlx::query(
             r#"
             INSERT INTO bt_vehicles (
@@ -436,31 +395,29 @@ impl BtVehicles {
                 name = EXCLUDED.name,
                 notes = EXCLUDED.notes,
                 withdrawn = EXCLUDED.withdrawn
-            "#
+            "#,
         )
-            .bind(vehicle.id)
-            .bind(&vehicle.slug)
-            .bind(&vehicle.fleet)
-            .bind(&vehicle.reg)
-            .bind(&vehicle.previous_reg)
-            .bind(vehicle.vehicle_type_id)
-            .bind(vehicle.livery_id)
-            .bind(&vehicle.branding)
-            .bind(&vehicle.operator_id)
-            .bind(&vehicle.garage_id)
-            .bind(&vehicle.name)
-            .bind(&vehicle.notes)
-            .bind(vehicle.withdrawn)
-            .execute(&self.pool)
-            .await?;
+        .bind(vehicle.id)
+        .bind(&vehicle.slug)
+        .bind(&vehicle.fleet)
+        .bind(&vehicle.reg)
+        .bind(&vehicle.previous_reg)
+        .bind(vehicle.vehicle_type_id)
+        .bind(vehicle.livery_id)
+        .bind(&vehicle.branding)
+        .bind(&vehicle.operator_id)
+        .bind(&vehicle.garage_id)
+        .bind(&vehicle.name)
+        .bind(&vehicle.notes)
+        .bind(vehicle.withdrawn)
+        .execute(&self.pool)
+        .await?;
 
         Ok(())
     }
 
     pub async fn delete(&self, id: i64) -> sqlx::Result<()> {
-        sqlx::query(
-            "DELETE FROM bt_vehicles WHERE id = $1"
-        )
+        sqlx::query("DELETE FROM bt_vehicles WHERE id = $1")
             .bind(id)
             .execute(&self.pool)
             .await?;
@@ -499,7 +456,8 @@ impl BtVehicles {
                 None => None,
             };
 
-            let photos = db.photos
+            let photos = db
+                .photos
                 .search(&Photos::query_only_search(vehicle.reg.clone()))
                 .await?;
 

@@ -1,6 +1,5 @@
-
-use sqlx::PgPool;
 use crate::db::resource::transxchange::operator_def::TxOperator;
+use sqlx::PgPool;
 
 pub static SQL_TX_OPERATOR: &str = r#"
 CREATE TABLE IF NOT EXISTS tx_operators (
@@ -37,15 +36,12 @@ impl TxOperators {
             WHERE id = $1
             "#,
         )
-            .bind(id)
-            .fetch_optional(&self.pool)
-            .await
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
     }
 
-    pub async fn get_or_create_comment_thread(
-        &self,
-        operator_id: &str,
-    ) -> sqlx::Result<i64> {
+    pub async fn get_or_create_comment_thread(&self, operator_id: &str) -> sqlx::Result<i64> {
         let mut tx = self.pool.begin().await?;
 
         // Lock the operator row to prevent concurrent thread creation.
@@ -57,10 +53,10 @@ impl TxOperators {
             FOR UPDATE
             "#,
         )
-            .bind(operator_id)
-            .fetch_optional(&mut *tx)
-            .await?
-            .ok_or(sqlx::Error::RowNotFound)?;
+        .bind(operator_id)
+        .fetch_optional(&mut *tx)
+        .await?
+        .ok_or(sqlx::Error::RowNotFound)?;
 
         if let Some(thread_id) = existing {
             tx.commit().await?;
@@ -76,9 +72,9 @@ impl TxOperators {
             RETURNING id
             "#,
         )
-            .bind(now)
-            .fetch_one(&mut *tx)
-            .await?;
+        .bind(now)
+        .fetch_one(&mut *tx)
+        .await?;
 
         sqlx::query(
             r#"
@@ -87,20 +83,17 @@ impl TxOperators {
             WHERE id = $2
             "#,
         )
-            .bind(thread_id)
-            .bind(operator_id)
-            .execute(&mut *tx)
-            .await?;
+        .bind(thread_id)
+        .bind(operator_id)
+        .execute(&mut *tx)
+        .await?;
 
         tx.commit().await?;
 
         Ok(thread_id)
     }
 
-    pub async fn search(
-        &self,
-        query: &str,
-    ) -> sqlx::Result<Vec<TxOperator>> {
+    pub async fn search(&self, query: &str) -> sqlx::Result<Vec<TxOperator>> {
         let search = format!("%{}%", query);
 
         sqlx::query_as::<_, TxOperator>(
@@ -122,9 +115,9 @@ impl TxOperators {
             LIMIT 50
             "#,
         )
-            .bind(search)
-            .fetch_all(&self.pool)
-            .await
+        .bind(search)
+        .fetch_all(&self.pool)
+        .await
     }
 
     pub async fn get_by_national_code(
@@ -144,15 +137,12 @@ impl TxOperators {
             WHERE national_code = $1
             "#,
         )
-            .bind(national_code)
-            .fetch_optional(&self.pool)
-            .await
+        .bind(national_code)
+        .fetch_optional(&self.pool)
+        .await
     }
 
-    pub async fn get_by_code(
-        &self,
-        code: &str,
-    ) -> sqlx::Result<Option<TxOperator>> {
+    pub async fn get_by_code(&self, code: &str) -> sqlx::Result<Option<TxOperator>> {
         sqlx::query_as::<_, TxOperator>(
             r#"
             SELECT
@@ -166,9 +156,9 @@ impl TxOperators {
             WHERE code = $1
             "#,
         )
-            .bind(code)
-            .fetch_optional(&self.pool)
-            .await
+        .bind(code)
+        .fetch_optional(&self.pool)
+        .await
     }
 
     pub async fn get_by_licence_number(
@@ -188,15 +178,12 @@ impl TxOperators {
             WHERE licence_number = $1
             "#,
         )
-            .bind(licence_number)
-            .fetch_optional(&self.pool)
-            .await
+        .bind(licence_number)
+        .fetch_optional(&self.pool)
+        .await
     }
 
-    pub async fn create(
-        &self,
-        operator: &TxOperator,
-    ) -> sqlx::Result<()> {
+    pub async fn create(&self, operator: &TxOperator) -> sqlx::Result<()> {
         sqlx::query(
             r#"
             INSERT INTO tx_operators (
@@ -209,21 +196,18 @@ impl TxOperators {
             VALUES ($1, $2, $3, $4, $5)
             "#,
         )
-            .bind(&operator.id)
-            .bind(&operator.national_code)
-            .bind(&operator.code)
-            .bind(&operator.short_name)
-            .bind(&operator.licence_number)
-            .execute(&self.pool)
-            .await?;
+        .bind(&operator.id)
+        .bind(&operator.national_code)
+        .bind(&operator.code)
+        .bind(&operator.short_name)
+        .bind(&operator.licence_number)
+        .execute(&self.pool)
+        .await?;
 
         Ok(())
     }
 
-    pub async fn upsert(
-        &self,
-        operator: &TxOperator,
-    ) -> sqlx::Result<()> {
+    pub async fn upsert(&self, operator: &TxOperator) -> sqlx::Result<()> {
         sqlx::query(
             r#"
             INSERT INTO tx_operators (
@@ -242,14 +226,14 @@ impl TxOperators {
                 licence_number = EXCLUDED.licence_number
             "#,
         )
-            .bind(&operator.id)
-            .bind(&operator.national_code)
-            .bind(&operator.code)
-            .bind(&operator.short_name)
-            .bind(&operator.licence_number)
-            .bind(operator.comment_thread)
-            .execute(&self.pool)
-            .await?;
+        .bind(&operator.id)
+        .bind(&operator.national_code)
+        .bind(&operator.code)
+        .bind(&operator.short_name)
+        .bind(&operator.licence_number)
+        .bind(operator.comment_thread)
+        .execute(&self.pool)
+        .await?;
 
         Ok(())
     }

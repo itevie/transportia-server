@@ -1,8 +1,8 @@
-use axum::extract::FromRequestParts;
-use axum::http::request::Parts;
-use axum::http::StatusCode;
-use jsonwebtoken::{decode, DecodingKey, Validation};
 use crate::util::jwt::JwtClaims;
+use axum::extract::FromRequestParts;
+use axum::http::StatusCode;
+use axum::http::request::Parts;
+use jsonwebtoken::{DecodingKey, Validation, decode};
 
 pub struct AuthUser {
     pub user_id: i64,
@@ -14,10 +14,7 @@ where
 {
     type Rejection = StatusCode;
 
-    async fn from_request_parts(
-        parts: &mut Parts,
-        _state: &S,
-    ) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
         let auth = parts
             .headers
             .get("Authorization")
@@ -35,7 +32,7 @@ where
             &DecodingKey::from_secret(secret.as_bytes()),
             &Validation::default(),
         )
-            .map_err(|_| StatusCode::UNAUTHORIZED)?;
+        .map_err(|_| StatusCode::UNAUTHORIZED)?;
 
         Ok(AuthUser {
             user_id: token_data.claims.sub,

@@ -48,5 +48,5 @@ pub struct BusListingResource {
     pub total: Option<i64>,
     pub lowest: Option<i64>,
     pub sold_out: Option<bool>,
-    pub some_sold_out: Option<bool>
+    pub some_sold_out: Option<bool>,
 }

@@ -1,11 +1,11 @@
-use axum::extract::{Path, Query, State};
-use axum::Json;
-use serde::Deserialize;
-use utoipa::{IntoParams, ToSchema};
 use crate::db;
 use crate::db::resource::transxchange::operator_def::TxOperator;
-use crate::http::errors::ApiError;
 use crate::http::HttpState;
+use crate::http::errors::ApiError;
+use axum::Json;
+use axum::extract::{Path, Query, State};
+use serde::Deserialize;
+use utoipa::{IntoParams, ToSchema};
 
 #[derive(Deserialize, ToSchema, IntoParams)]
 pub struct OperatorsSearch {
@@ -80,7 +80,6 @@ pub async fn get_operator(
         .await
         .map_err(|err| err.to_string())?
         .ok_or_else(|| "Operator not found".to_string())?;
-
 
     Ok(Json(operator))
 }

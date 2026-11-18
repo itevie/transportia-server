@@ -1,9 +1,9 @@
-use std::time::Duration;
+use crate::db::resource::model_bus_listings::model_bus_listing_def::BusListingResource;
+use crate::fetchers::model_manufacturers::{KNOWN_MANUFACTURERS, get_manufacturer_code};
 use reqwest::{Client, Url};
 use serde::Deserialize;
+use std::time::Duration;
 use tokio::time::sleep;
-use crate::db::resource::model_bus_listings::model_bus_listing_def::BusListingResource;
-use crate::fetchers::model_manufacturers::{get_manufacturer_code, KNOWN_MANUFACTURERS};
 
 pub async fn fetch() -> Result<Vec<BusListingResource>, Box<dyn std::error::Error>> {
     let client = Client::new();
@@ -20,10 +20,7 @@ pub async fn fetch() -> Result<Vec<BusListingResource>, Box<dyn std::error::Erro
 
         let url = make_mbc_url(page, per_page);
 
-        let http_response = client
-            .get(&url)
-            .send()
-            .await?;
+        let http_response = client.get(&url).send().await?;
 
         let status = http_response.status();
         let text = http_response.text().await?;
@@ -48,7 +45,12 @@ pub async fn fetch() -> Result<Vec<BusListingResource>, Box<dyn std::error::Erro
 
         let response: ProductsResponse = serde_json::from_str(&text)?;
 
-        println!("{} {} {}", response.meta.pagination.current_page, response.meta.pagination.total_pages, response.meta.pagination.total);
+        println!(
+            "{} {} {}",
+            response.meta.pagination.current_page,
+            response.meta.pagination.total_pages,
+            response.meta.pagination.total
+        );
 
         for part in response.data {
             listings.push(convert_product(part, &url));
@@ -65,7 +67,7 @@ pub async fn fetch() -> Result<Vec<BusListingResource>, Box<dyn std::error::Erro
 pub struct ListingDetails {
     pub manufacturer: String,
     pub manufacturer_id: String,
-    pub scale: Option<String>
+    pub scale: Option<String>,
 }
 
 pub fn get_details(title: String) -> ListingDetails {
@@ -84,7 +86,7 @@ pub fn get_details(title: String) -> ListingDetails {
         .iter()
         .find(|part| part.ends_with("Scale"))
         .map(|part| part.to_string());
-    
+
     ListingDetails {
         manufacturer: manufacturer.to_string(),
         manufacturer_id,
@@ -92,10 +94,7 @@ pub fn get_details(title: String) -> ListingDetails {
     }
 }
 
-fn convert_product(
-    part: Product,
-    url: &str,
-) -> BusListingResource {
+fn convert_product(part: Product, url: &str) -> BusListingResource {
     let details = get_details(part.name.clone());
     let title_parts = part.name.split(" / ").collect::<Vec<&str>>();
 
@@ -114,7 +113,7 @@ fn convert_product(
         price_low: part.price.low,
         price_high: part.price.high,
         currency: Some("£".to_string()),
-        image_list:  part
+        image_list: part
             .images
             .data
             .first()
@@ -155,9 +154,6 @@ fn make_mbc_url(page: u32, per_page: u32) -> String {
 
     url.to_string()
 }
-
-
-
 
 #[derive(Debug, Deserialize)]
 struct ProductsResponse {
@@ -273,4 +269,3 @@ struct ImageUrls {
     #[serde(rename = "2560")]
     size_2560: String,
 }
-

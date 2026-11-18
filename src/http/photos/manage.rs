@@ -1,12 +1,12 @@
-use axum::extract::{Path, State};
-use axum::http::StatusCode;
-use axum::Json;
 use crate::auth::quick::check_photo;
 use crate::db::resource::photo::photo_def::PhotoUpdate;
 use crate::extractors::authenticator::AuthUser;
 use crate::extractors::optional_authenticator::OptionalAuthUserResult;
-use crate::http::errors::ApiError;
 use crate::http::HttpState;
+use crate::http::errors::ApiError;
+use axum::Json;
+use axum::extract::{Path, State};
+use axum::http::StatusCode;
 
 #[utoipa::path(
     patch,
@@ -71,7 +71,7 @@ pub async fn update_photo(
 pub async fn delete_photo(
     State(state): State<HttpState>,
     Path(id): Path<i64>,
-    AuthUser { user_id }: AuthUser
+    AuthUser { user_id }: AuthUser,
 ) -> Result<StatusCode, ApiError> {
     check_photo(state.db.clone(), id, user_id).await?;
 

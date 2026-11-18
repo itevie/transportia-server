@@ -21,7 +21,6 @@ pub static KNOWN_MANUFACTURERS: &[&str] = &[
     "Corgi Omnibus",
     "Bachmann",
     "Hornby",
-
     // UK / European specialist manufacturers
     "Motorart",
     "Minichamps",
@@ -38,7 +37,6 @@ pub static KNOWN_MANUFACTURERS: &[&str] = &[
     "Siku",
     "Greenlight",
     "Oxford",
-
     // Chinese / Asian manufacturers commonly encountered
     "KMB",
     "Tiny",
@@ -51,7 +49,6 @@ pub static KNOWN_MANUFACTURERS: &[&str] = &[
     "GeminiJets",
     "Gemini200",
     "GeminiMacs",
-
     // Other model manufacturers
     "Tekno",
     "NZG",

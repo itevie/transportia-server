@@ -2,14 +2,16 @@ use std::sync::Arc;
 
 use chrono::Utc;
 use sqlx::{
-    postgres::{PgTypeInfo, PgValueRef},
     Decode, PgPool, Postgres, Type,
+    postgres::{PgTypeInfo, PgValueRef},
 };
 
 use crate::db::Database;
 use crate::db::resource::bustimes::vehicle::BtVehicles;
 use crate::db::resource::comment::comment::Comments;
-use crate::db::resource::favourite::favourite_def::{Favourite, FavouriteFilled, FavouriteObject, FavouriteType};
+use crate::db::resource::favourite::favourite_def::{
+    Favourite, FavouriteFilled, FavouriteObject, FavouriteType,
+};
 use crate::db::resource::model_bus::model_bus::ModelBuses;
 use crate::db::resource::photo::photo::Photos;
 use crate::db::resource::tram::tram::Trams;
@@ -57,10 +59,10 @@ impl Favourites {
             ORDER BY created_at DESC
             "#,
         )
-            .bind(user_id)
-            .bind(target_type)
-            .fetch_all(&self.pool)
-            .await
+        .bind(user_id)
+        .bind(target_type)
+        .fetch_all(&self.pool)
+        .await
     }
 
     pub async fn get(
@@ -86,11 +88,11 @@ impl Favourites {
             LIMIT 1
             "#,
         )
-            .bind(user_id)
-            .bind(target_type)
-            .bind(target_id.to_string())
-            .fetch_optional(&self.pool)
-            .await
+        .bind(user_id)
+        .bind(target_type)
+        .bind(target_id.to_string())
+        .fetch_optional(&self.pool)
+        .await
     }
 
     pub async fn create(
@@ -115,12 +117,12 @@ impl Favourites {
             RETURNING id
             "#,
         )
-            .bind(user_id)
-            .bind(target_id.to_string())
-            .bind(target_type)
-            .bind(created_at)
-            .fetch_one(&self.pool)
-            .await
+        .bind(user_id)
+        .bind(target_id.to_string())
+        .bind(target_type)
+        .bind(created_at)
+        .fetch_one(&self.pool)
+        .await
     }
 
     pub async fn get_by_group_id(
@@ -143,10 +145,10 @@ impl Favourites {
             ORDER BY created_at DESC
             "#,
         )
-            .bind(user_id)
-            .bind(group_id)
-            .fetch_all(&self.pool)
-            .await
+        .bind(user_id)
+        .bind(group_id)
+        .fetch_all(&self.pool)
+        .await
     }
 
     pub async fn update_group_id(
@@ -165,12 +167,12 @@ impl Favourites {
               AND target_type = $4
             "#,
         )
-            .bind(group_id)
-            .bind(user_id)
-            .bind(target_id.to_string())
-            .bind(target_type)
-            .execute(&self.pool)
-            .await?;
+        .bind(group_id)
+        .bind(user_id)
+        .bind(target_id.to_string())
+        .bind(target_type)
+        .execute(&self.pool)
+        .await?;
 
         Ok(result.rows_affected() > 0)
     }
@@ -189,11 +191,11 @@ impl Favourites {
               AND target_type = $3
             "#,
         )
-            .bind(user_id)
-            .bind(target_id.to_string())
-            .bind(target_type)
-            .execute(&self.pool)
-            .await?;
+        .bind(user_id)
+        .bind(target_id.to_string())
+        .bind(target_type)
+        .execute(&self.pool)
+        .await?;
 
         Ok(())
     }
@@ -220,16 +222,9 @@ impl Favourites {
                         .await?
                         .ok_or(sqlx::Error::RowNotFound)?;
 
-                    let mut result = Photos::fill_out(
-                        db.clone(),
-                        vec![photo],
-                        user_id,
-                    )
-                        .await?;
+                    let mut result = Photos::fill_out(db.clone(), vec![photo], user_id).await?;
 
-                    FavouriteObject::BusPhoto(
-                        result.pop().ok_or(sqlx::Error::RowNotFound)?,
-                    )
+                    FavouriteObject::BusPhoto(result.pop().ok_or(sqlx::Error::RowNotFound)?)
                 }
 
                 FavouriteType::Comment => {
@@ -239,12 +234,7 @@ impl Favourites {
                         .await?
                         .ok_or(sqlx::Error::RowNotFound)?;
 
-                    let filled_out = Comments::fill_out(
-                        db.clone(),
-                        comment,
-                        user_id,
-                    )
-                        .await?;
+                    let filled_out = Comments::fill_out(db.clone(), comment, user_id).await?;
 
                     FavouriteObject::Comment(filled_out)
                 }
@@ -256,16 +246,9 @@ impl Favourites {
                         .await?
                         .ok_or(sqlx::Error::RowNotFound)?;
 
-                    let mut result = Trams::fill_out(
-                        db.clone(),
-                        vec![tram],
-                        user_id,
-                    )
-                        .await?;
+                    let mut result = Trams::fill_out(db.clone(), vec![tram], user_id).await?;
 
-                    FavouriteObject::Tram(
-                        result.pop().ok_or(sqlx::Error::RowNotFound)?,
-                    )
+                    FavouriteObject::Tram(result.pop().ok_or(sqlx::Error::RowNotFound)?)
                 }
 
                 FavouriteType::ModelBus => {
@@ -275,16 +258,10 @@ impl Favourites {
                         .await?
                         .ok_or(sqlx::Error::RowNotFound)?;
 
-                    let mut result = ModelBuses::fill_out(
-                        db.clone(),
-                        vec![model_bus],
-                        user_id,
-                    )
-                        .await?;
+                    let mut result =
+                        ModelBuses::fill_out(db.clone(), vec![model_bus], user_id).await?;
 
-                    FavouriteObject::ModelBus(
-                        result.pop().ok_or(sqlx::Error::RowNotFound)?,
-                    )
+                    FavouriteObject::ModelBus(result.pop().ok_or(sqlx::Error::RowNotFound)?)
                 }
 
                 FavouriteType::Operator => {
@@ -304,16 +281,10 @@ impl Favourites {
                         .await?
                         .ok_or(sqlx::Error::RowNotFound)?;
 
-                    let mut result = BtVehicles::fill_out(
-                        db.clone(),
-                        vec![vehicle],
-                        user_id,
-                    )
-                        .await?;
+                    let mut result =
+                        BtVehicles::fill_out(db.clone(), vec![vehicle], user_id).await?;
 
-                    FavouriteObject::Vehicle(
-                        result.pop().ok_or(sqlx::Error::RowNotFound)?,
-                    )
+                    FavouriteObject::Vehicle(result.pop().ok_or(sqlx::Error::RowNotFound)?)
                 }
 
                 FavouriteType::VehicleType => {

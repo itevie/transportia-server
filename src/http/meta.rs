@@ -1,9 +1,9 @@
+use crate::fetchers::model_manufacturers::KNOWN_MANUFACTURERS;
 use axum::Json;
 use axum::response::{IntoResponse, Response};
 use serde::Serialize;
 use serde_json::json;
 use utoipa::ToSchema;
-use crate::fetchers::model_manufacturers::KNOWN_MANUFACTURERS;
 
 #[derive(Debug, Serialize, ToSchema)]
 pub struct MetaResponse {
@@ -42,5 +42,5 @@ pub async fn meta() -> Response {
         },
         model_bus_manufacturers: KNOWN_MANUFACTURERS.iter().map(|x| x.to_string()).collect(),
     })
-        .into_response()
+    .into_response()
 }

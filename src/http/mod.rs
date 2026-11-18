@@ -1,40 +1,43 @@
-use std::sync::Arc;
-use axum::Router;
-use utoipa::OpenApi;
-use meta::meta;
 use crate::bods::datafeed::BodsSiriVmClient;
 use crate::db::Database;
 use crate::http::users::registration;
+use axum::Router;
+use meta::meta;
+use std::sync::Arc;
+use utoipa::OpenApi;
 
-pub mod bus_listings;
-pub mod users;
-pub mod bustimes;
-pub mod transxchange;
-pub mod photos;
-pub mod errors;
-pub mod doc;
-pub mod route_checklists;
-pub mod meta;
-pub mod favourites;
-mod photo_ratings;
-mod bods;
-mod comments;
 mod big_search;
+mod bods;
+pub mod bus_listings;
+pub mod bustimes;
+mod comments;
+pub mod doc;
+pub mod errors;
+pub mod favourites;
 mod favourites_groups;
-mod trams;
+pub mod meta;
 mod model_buses;
+mod photo_ratings;
+pub mod photos;
+pub mod route_checklists;
+mod trams;
+pub mod transxchange;
+pub mod users;
 
 #[derive(Clone)]
 pub struct HttpState {
     pub db: Arc<Database>,
     pub s3: Arc<aws_sdk_s3::Client>,
-    pub bods_client: BodsSiriVmClient
+    pub bods_client: BodsSiriVmClient,
 }
 
 pub fn routes() -> Router<HttpState> {
     Router::new()
         .route("/meta", axum::routing::get(meta))
-        .route("/everything-search", axum::routing::get(big_search::big_search_route))
+        .route(
+            "/everything-search",
+            axum::routing::get(big_search::big_search_route),
+        )
         .merge(bus_listings::routes())
         .merge(users::routes())
         .merge(bustimes::routes())
@@ -49,8 +52,6 @@ pub fn routes() -> Router<HttpState> {
         .merge(trams::routes())
         .merge(model_buses::routes())
 }
-
-
 
 #[derive(OpenApi)]
 #[openapi(
@@ -116,7 +117,7 @@ pub fn routes() -> Router<HttpState> {
         photo_ratings::manage::rate_photo,
         photo_ratings::manage::delete_photo_rating,
         photo_ratings::query::get_photo_rating,
-    
+
         comments::query::get_comments,
         comments::manage::create_comment,
         comments::manage::update_comment,

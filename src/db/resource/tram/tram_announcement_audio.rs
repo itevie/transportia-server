@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
-use sqlx::{PgPool, QueryBuilder, Postgres, query_as, query_scalar};
+use sqlx::{PgPool, Postgres, QueryBuilder, query_as, query_scalar};
 
 use crate::db::Database;
 use crate::db::resource::tram::tram_announcement_audio_def::TramAnnouncementAudio;
@@ -46,10 +46,7 @@ impl TramAnnouncementAudios {
         Self { pool }
     }
 
-    pub async fn get(
-        &self,
-        id: i64,
-    ) -> Result<Option<TramAnnouncementAudio>, sqlx::Error> {
+    pub async fn get(&self, id: i64) -> Result<Option<TramAnnouncementAudio>, sqlx::Error> {
         query_as::<_, TramAnnouncementAudio>(
             r#"
             SELECT *
@@ -57,9 +54,9 @@ impl TramAnnouncementAudios {
             WHERE id = $1
             "#,
         )
-            .bind(id)
-            .fetch_optional(&self.pool)
-            .await
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
     }
 
     pub async fn get_groups(&self) -> Result<Vec<String>, sqlx::Error> {
@@ -70,8 +67,8 @@ impl TramAnnouncementAudios {
             ORDER BY audio_group
             "#,
         )
-            .fetch_all(&self.pool)
-            .await
+        .fetch_all(&self.pool)
+        .await
     }
 
     pub async fn search(
@@ -80,9 +77,8 @@ impl TramAnnouncementAudios {
     ) -> Result<Vec<TramAnnouncementAudio>, sqlx::Error> {
         let page_length = query.page_length.unwrap_or(50).min(1000);
 
-        let mut builder: QueryBuilder<Postgres> = QueryBuilder::new(
-            "SELECT taa.* FROM tram_announcement_audios taa WHERE 1 = 1",
-        );
+        let mut builder: QueryBuilder<Postgres> =
+            QueryBuilder::new("SELECT taa.* FROM tram_announcement_audios taa WHERE 1 = 1");
 
         if let Some(value) = &query.file_name {
             builder
@@ -103,21 +99,15 @@ impl TramAnnouncementAudios {
         }
 
         if let Some(value) = query.operator {
-            builder
-                .push(" AND taa.operator_id = ")
-                .push_bind(value);
+            builder.push(" AND taa.operator_id = ").push_bind(value);
         }
 
         if let Some(value) = query.route {
-            builder
-                .push(" AND taa.route_id = ")
-                .push_bind(value);
+            builder.push(" AND taa.route_id = ").push_bind(value);
         }
 
         if let Some(value) = query.next_stop {
-            builder
-                .push(" AND taa.next_stop_id = ")
-                .push_bind(value);
+            builder.push(" AND taa.next_stop_id = ").push_bind(value);
         }
 
         if let Some(value) = &query.search {
@@ -143,9 +133,7 @@ impl TramAnnouncementAudios {
             .push_bind(page_length);
 
         if let Some(offset) = query.offset {
-            builder
-                .push(" OFFSET ")
-                .push_bind(offset);
+            builder.push(" OFFSET ").push_bind(offset);
         }
 
         builder
@@ -154,10 +142,7 @@ impl TramAnnouncementAudios {
             .await
     }
 
-    pub async fn create(
-        &self,
-        audio: &TramAnnouncementAudio,
-    ) -> Result<i64, sqlx::Error> {
+    pub async fn create(&self, audio: &TramAnnouncementAudio) -> Result<i64, sqlx::Error> {
         query_scalar(
             r#"
             INSERT INTO tram_announcement_audios (
@@ -175,15 +160,15 @@ impl TramAnnouncementAudios {
             RETURNING id
             "#,
         )
-            .bind(&audio.file_name)
-            .bind(&audio.audio_group)
-            .bind(&audio.label)
-            .bind(audio.operator_id)
-            .bind(audio.route_id)
-            .bind(audio.next_stop_id)
-            .bind(&audio.created_at)
-            .fetch_one(&self.pool)
-            .await
+        .bind(&audio.file_name)
+        .bind(&audio.audio_group)
+        .bind(&audio.label)
+        .bind(audio.operator_id)
+        .bind(audio.route_id)
+        .bind(audio.next_stop_id)
+        .bind(&audio.created_at)
+        .fetch_one(&self.pool)
+        .await
     }
 
     pub async fn scan_tram_audios<P: AsRef<Path>>(
@@ -220,10 +205,7 @@ impl TramAnnouncementAudios {
                     .unwrap_or_default()
                     .to_string();
 
-                println!(
-                    "Found tram announcement: {} {}",
-                    file_name, audio_group
-                );
+                println!("Found tram announcement: {} {}", file_name, audio_group);
 
                 audios.push(TramAnnouncementAudio {
                     id: 0,
@@ -247,10 +229,7 @@ impl TramAnnouncementAudios {
         Ok(())
     }
 
-    pub async fn update(
-        &self,
-        audio: &TramAnnouncementAudio,
-    ) -> Result<(), sqlx::Error> {
+    pub async fn update(&self, audio: &TramAnnouncementAudio) -> Result<(), sqlx::Error> {
         let updated = sqlx::query(
             r#"
             UPDATE tram_announcement_audios
@@ -265,16 +244,16 @@ impl TramAnnouncementAudios {
             WHERE id = $8
             "#,
         )
-            .bind(&audio.file_name)
-            .bind(&audio.audio_group)
-            .bind(&audio.label)
-            .bind(audio.operator_id)
-            .bind(audio.route_id)
-            .bind(audio.next_stop_id)
-            .bind(&audio.created_at)
-            .bind(audio.id)
-            .execute(&self.pool)
-            .await?;
+        .bind(&audio.file_name)
+        .bind(&audio.audio_group)
+        .bind(&audio.label)
+        .bind(audio.operator_id)
+        .bind(audio.route_id)
+        .bind(audio.next_stop_id)
+        .bind(&audio.created_at)
+        .bind(audio.id)
+        .execute(&self.pool)
+        .await?;
 
         if updated.rows_affected() == 0 {
             return Err(sqlx::Error::RowNotFound);
@@ -284,9 +263,7 @@ impl TramAnnouncementAudios {
     }
 
     pub async fn delete(&self, id: i64) -> Result<(), sqlx::Error> {
-        sqlx::query(
-            "DELETE FROM tram_announcement_audios WHERE id = $1",
-        )
+        sqlx::query("DELETE FROM tram_announcement_audios WHERE id = $1")
             .bind(id)
             .execute(&self.pool)
             .await?;

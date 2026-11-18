@@ -1,5 +1,5 @@
-use sqlx::{PgPool, Row};
 use crate::db::resource::star_rating::star_rating_def::PhotoRating;
+use sqlx::{PgPool, Row};
 
 pub static SQL_PHOTO_RATING: &str = r#"
 CREATE TABLE IF NOT EXISTS photo_ratings (
@@ -29,15 +29,12 @@ impl PhotoRatings {
             WHERE id = $1
             "#,
         )
-            .bind(id)
-            .fetch_optional(&self.pool)
-            .await
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
     }
 
-    pub async fn get_by_photo_id(
-        &self,
-        photo_id: i64,
-    ) -> Result<Vec<PhotoRating>, sqlx::Error> {
+    pub async fn get_by_photo_id(&self, photo_id: i64) -> Result<Vec<PhotoRating>, sqlx::Error> {
         sqlx::query_as::<_, PhotoRating>(
             r#"
             SELECT *
@@ -46,9 +43,9 @@ impl PhotoRatings {
             ORDER BY created_at DESC
             "#,
         )
-            .bind(photo_id)
-            .fetch_all(&self.pool)
-            .await
+        .bind(photo_id)
+        .fetch_all(&self.pool)
+        .await
     }
 
     pub async fn get_by_user_and_photo(
@@ -64,16 +61,13 @@ impl PhotoRatings {
               AND photo_id = $2
             "#,
         )
-            .bind(user_id)
-            .bind(photo_id)
-            .fetch_optional(&self.pool)
-            .await
+        .bind(user_id)
+        .bind(photo_id)
+        .fetch_optional(&self.pool)
+        .await
     }
 
-    pub async fn average_rating(
-        &self,
-        photo_id: i64,
-    ) -> Result<f64, sqlx::Error> {
+    pub async fn average_rating(&self, photo_id: i64) -> Result<f64, sqlx::Error> {
         let average: f64 = sqlx::query_scalar(
             r#"
             SELECT COALESCE(AVG(rating), 0.0)::DOUBLE PRECISION
@@ -81,17 +75,14 @@ impl PhotoRatings {
             WHERE photo_id = $1
             "#,
         )
-            .bind(photo_id)
-            .fetch_one(&self.pool)
-            .await?;
+        .bind(photo_id)
+        .fetch_one(&self.pool)
+        .await?;
 
         Ok(average)
     }
 
-    pub async fn create(
-        &self,
-        rating: &PhotoRating,
-    ) -> Result<(), sqlx::Error> {
+    pub async fn create(&self, rating: &PhotoRating) -> Result<(), sqlx::Error> {
         sqlx::query(
             r#"
             INSERT INTO photo_ratings (
@@ -103,20 +94,17 @@ impl PhotoRatings {
             VALUES ($1, $2, $3, $4)
             "#,
         )
-            .bind(rating.photo_id)
-            .bind(rating.user_id)
-            .bind(rating.rating)
-            .bind(&rating.created_at)
-            .execute(&self.pool)
-            .await?;
+        .bind(rating.photo_id)
+        .bind(rating.user_id)
+        .bind(rating.rating)
+        .bind(&rating.created_at)
+        .execute(&self.pool)
+        .await?;
 
         Ok(())
     }
 
-    pub async fn upsert(
-        &self,
-        rating: &PhotoRating,
-    ) -> Result<(), sqlx::Error> {
+    pub async fn upsert(&self, rating: &PhotoRating) -> Result<(), sqlx::Error> {
         sqlx::query(
             r#"
             INSERT INTO photo_ratings (
@@ -134,21 +122,19 @@ impl PhotoRatings {
                 created_at = EXCLUDED.created_at
             "#,
         )
-            .bind(rating.id)
-            .bind(rating.photo_id)
-            .bind(rating.user_id)
-            .bind(rating.rating)
-            .bind(&rating.created_at)
-            .execute(&self.pool)
-            .await?;
+        .bind(rating.id)
+        .bind(rating.photo_id)
+        .bind(rating.user_id)
+        .bind(rating.rating)
+        .bind(&rating.created_at)
+        .execute(&self.pool)
+        .await?;
 
         Ok(())
     }
 
     pub async fn delete(&self, id: i64) -> Result<(), sqlx::Error> {
-        sqlx::query(
-            "DELETE FROM photo_ratings WHERE id = $1",
-        )
+        sqlx::query("DELETE FROM photo_ratings WHERE id = $1")
             .bind(id)
             .execute(&self.pool)
             .await?;
@@ -168,10 +154,10 @@ impl PhotoRatings {
               AND photo_id = $2
             "#,
         )
-            .bind(user_id)
-            .bind(photo_id)
-            .execute(&self.pool)
-            .await?;
+        .bind(user_id)
+        .bind(photo_id)
+        .execute(&self.pool)
+        .await?;
 
         Ok(())
     }

@@ -1,6 +1,6 @@
 use axum::extract::FromRequestParts;
 use axum::http::request::Parts;
-use jsonwebtoken::{decode, DecodingKey, Validation};
+use jsonwebtoken::{DecodingKey, Validation, decode};
 
 use crate::util::jwt::JwtClaims;
 
@@ -16,10 +16,7 @@ where
 {
     type Rejection = std::convert::Infallible;
 
-    async fn from_request_parts(
-        parts: &mut Parts,
-        _state: &S,
-    ) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
         let user = parts
             .headers
             .get("Authorization")
@@ -33,7 +30,7 @@ where
                     &DecodingKey::from_secret(secret.as_bytes()),
                     &Validation::default(),
                 )
-                    .ok()
+                .ok()
             })
             .map(|token_data| OptionalAuthUserResult {
                 user_id: token_data.claims.sub,

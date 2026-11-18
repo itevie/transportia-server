@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use serde::Deserialize;
-use sqlx::{FromRow, PgPool, QueryBuilder, Postgres};
+use sqlx::{FromRow, PgPool, Postgres, QueryBuilder};
 use utoipa::{IntoParams, ToSchema};
 
 use crate::db::Database;
@@ -69,9 +69,9 @@ impl Trams {
             WHERE id = $1
             "#,
         )
-            .bind(id)
-            .fetch_optional(&self.pool)
-            .await
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
     }
 
     pub async fn search(&self, query: &TramQuery) -> sqlx::Result<Vec<Tram>> {
@@ -95,9 +95,7 @@ impl Trams {
         );
 
         if let Some(value) = query.operator {
-            builder
-                .push(" AND t.operator_id = ")
-                .push_bind(value);
+            builder.push(" AND t.operator_id = ").push_bind(value);
         }
 
         if let Some(value) = &query.fleet {
@@ -107,15 +105,11 @@ impl Trams {
         }
 
         if let Some(value) = query.livery {
-            builder
-                .push(" AND t.livery_id = ")
-                .push_bind(value);
+            builder.push(" AND t.livery_id = ").push_bind(value);
         }
 
         if let Some(value) = query.tram_type {
-            builder
-                .push(" AND t.tram_type_id = ")
-                .push_bind(value);
+            builder.push(" AND t.tram_type_id = ").push_bind(value);
         }
 
         if let Some(value) = &query.garage {
@@ -125,9 +119,7 @@ impl Trams {
         }
 
         if let Some(value) = query.withdrawn {
-            builder
-                .push(" AND t.withdrawn = ")
-                .push_bind(value);
+            builder.push(" AND t.withdrawn = ").push_bind(value);
         }
 
         if let Some(value) = &query.name {
@@ -162,15 +154,10 @@ impl Trams {
             .push_bind(page_length);
 
         if let Some(offset) = query.offset {
-            builder
-                .push(" OFFSET ")
-                .push_bind(offset.max(0));
+            builder.push(" OFFSET ").push_bind(offset.max(0));
         }
 
-        builder
-            .build_query_as::<Tram>()
-            .fetch_all(&self.pool)
-            .await
+        builder.build_query_as::<Tram>().fetch_all(&self.pool).await
     }
 
     pub async fn create(&self, tram: &Tram) -> sqlx::Result<i64> {
@@ -190,16 +177,16 @@ impl Trams {
             RETURNING id
             "#,
         )
-            .bind(tram.operator_id)
-            .bind(&tram.fleet)
-            .bind(tram.livery_id)
-            .bind(tram.tram_type_id)
-            .bind(&tram.garage)
-            .bind(tram.withdrawn)
-            .bind(&tram.name)
-            .bind(&tram.branding)
-            .fetch_one(&self.pool)
-            .await
+        .bind(tram.operator_id)
+        .bind(&tram.fleet)
+        .bind(tram.livery_id)
+        .bind(tram.tram_type_id)
+        .bind(&tram.garage)
+        .bind(tram.withdrawn)
+        .bind(&tram.name)
+        .bind(&tram.branding)
+        .fetch_one(&self.pool)
+        .await
     }
 
     pub async fn update(&self, tram: &Tram) -> sqlx::Result<()> {
@@ -218,17 +205,17 @@ impl Trams {
             WHERE id = $9
             "#,
         )
-            .bind(tram.operator_id)
-            .bind(&tram.fleet)
-            .bind(tram.livery_id)
-            .bind(tram.tram_type_id)
-            .bind(&tram.garage)
-            .bind(tram.withdrawn)
-            .bind(&tram.name)
-            .bind(&tram.branding)
-            .bind(tram.id)
-            .execute(&self.pool)
-            .await?;
+        .bind(tram.operator_id)
+        .bind(&tram.fleet)
+        .bind(tram.livery_id)
+        .bind(tram.tram_type_id)
+        .bind(&tram.garage)
+        .bind(tram.withdrawn)
+        .bind(&tram.name)
+        .bind(&tram.branding)
+        .bind(tram.id)
+        .execute(&self.pool)
+        .await?;
 
         if result.rows_affected() == 0 {
             return Err(sqlx::Error::RowNotFound);

@@ -1,8 +1,8 @@
+use crate::db::resource::model_bus_listings::model_bus_listing_def::BusListingResource;
+use crate::fetchers::mbc::get_details;
 use anyhow::{Context, Result};
 use reqwest::Url;
 use scraper::{Html, Selector};
-use crate::db::resource::model_bus_listings::model_bus_listing_def::BusListingResource;
-use crate::fetchers::mbc::get_details;
 
 #[derive(Debug, Clone)]
 pub struct TtcdiecastProduct {
@@ -37,14 +37,11 @@ pub async fn scrape_products(page_url: &str) -> Result<Vec<BusListingResource>> 
     let title_selector = Selector::parse("h3.card__heading a").unwrap();
     let image_selector = Selector::parse("img").unwrap();
 
-    let regular_selector =
-        Selector::parse(".price__regular .price-item--regular").unwrap();
+    let regular_selector = Selector::parse(".price__regular .price-item--regular").unwrap();
 
-    let original_selector =
-        Selector::parse(".price__sale s.price-item--regular").unwrap();
+    let original_selector = Selector::parse(".price__sale s.price-item--regular").unwrap();
 
-    let sale_selector =
-        Selector::parse(".price__sale .price-item--sale").unwrap();
+    let sale_selector = Selector::parse(".price__sale .price-item--sale").unwrap();
 
     let base_url = Url::parse(page_url)?;
     let mut products = Vec::new();
@@ -60,10 +57,7 @@ pub async fn scrape_products(page_url: &str) -> Result<Vec<BusListingResource>> 
 
         let title = text_of(title_link);
 
-        let href = title_link
-            .value()
-            .attr("href")
-            .unwrap_or_default();
+        let href = title_link.value().attr("href").unwrap_or_default();
 
         let url = base_url.join(href)?.to_string();
 
@@ -76,20 +70,11 @@ pub async fn scrape_products(page_url: &str) -> Result<Vec<BusListingResource>> 
             .unwrap_or_default();
 
         // Find the prices within their respective containers.
-        let regular_price = item
-            .select(&regular_selector)
-            .next()
-            .map(text_of);
+        let regular_price = item.select(&regular_selector).next().map(text_of);
 
-        let original_price = item
-            .select(&original_selector)
-            .next()
-            .map(text_of);
+        let original_price = item.select(&original_selector).next().map(text_of);
 
-        let sale_price = item
-            .select(&sale_selector)
-            .next()
-            .map(text_of);
+        let sale_price = item.select(&sale_selector).next().map(text_of);
 
         products.push(TtcdiecastProduct {
             title,
@@ -106,11 +91,11 @@ pub async fn scrape_products(page_url: &str) -> Result<Vec<BusListingResource>> 
 }
 
 pub fn convert(product: TtcdiecastProduct) -> BusListingResource {
-    let sale_price = parse_price(&product.sale_price
-        .unwrap_or("0".to_string())).unwrap_or_default();
+    let sale_price =
+        parse_price(&product.sale_price.unwrap_or("0".to_string())).unwrap_or_default();
 
-    let regular_price = parse_price(&product.regular_price
-        .unwrap_or("0".to_string())).unwrap_or_default();
+    let regular_price =
+        parse_price(&product.regular_price.unwrap_or("0".to_string())).unwrap_or_default();
 
     let details = get_details(product.title.clone());
 

@@ -1,12 +1,11 @@
-
+use crate::bods::datafeed::{BodsSiriVmClient, DatafeedQuery, VehicleJourney};
+use crate::http::HttpState;
+use crate::http::errors::ApiError;
 use axum::{
-    extract::{Query, State},
     Json,
+    extract::{Query, State},
 };
 use utoipa::path;
-use crate::bods::datafeed::{BodsSiriVmClient, DatafeedQuery, VehicleJourney};
-use crate::http::errors::ApiError;
-use crate::http::HttpState;
 
 #[utoipa::path(
     get,

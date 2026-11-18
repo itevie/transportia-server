@@ -1,6 +1,5 @@
-
-use sqlx::PgPool;
 use crate::db::resource::tram::tram_route_def::TramRoute;
+use sqlx::PgPool;
 
 pub static SQL_TRAM_ROUTE: &str = r#"
 CREATE TABLE IF NOT EXISTS tram_routes (
@@ -31,9 +30,9 @@ impl TramRoutes {
             WHERE id = $1
             "#,
         )
-            .bind(id)
-            .fetch_optional(&self.pool)
-            .await
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
     }
 
     pub async fn search(&self, query: &str) -> sqlx::Result<Vec<TramRoute>> {
@@ -48,9 +47,9 @@ impl TramRoutes {
             LIMIT 50
             "#,
         )
-            .bind(search)
-            .fetch_all(&self.pool)
-            .await
+        .bind(search)
+        .fetch_all(&self.pool)
+        .await
     }
 
     pub async fn create(&self, route: &TramRoute) -> sqlx::Result<i64> {
@@ -67,13 +66,13 @@ impl TramRoutes {
             RETURNING id
             "#,
         )
-            .bind(&route.name)
-            .bind(route.start_stop_id)
-            .bind(route.end_stop_id)
-            .bind(route.operator_id)
-            .bind(&route.created_at)
-            .fetch_one(&self.pool)
-            .await
+        .bind(&route.name)
+        .bind(route.start_stop_id)
+        .bind(route.end_stop_id)
+        .bind(route.operator_id)
+        .bind(&route.created_at)
+        .fetch_one(&self.pool)
+        .await
     }
 
     pub async fn update(&self, route: &TramRoute) -> sqlx::Result<()> {
@@ -89,14 +88,14 @@ impl TramRoutes {
             WHERE id = $6
             "#,
         )
-            .bind(&route.name)
-            .bind(route.start_stop_id)
-            .bind(route.end_stop_id)
-            .bind(route.operator_id)
-            .bind(&route.created_at)
-            .bind(route.id)
-            .execute(&self.pool)
-            .await?;
+        .bind(&route.name)
+        .bind(route.start_stop_id)
+        .bind(route.end_stop_id)
+        .bind(route.operator_id)
+        .bind(&route.created_at)
+        .bind(route.id)
+        .execute(&self.pool)
+        .await?;
 
         if result.rows_affected() == 0 {
             return Err(sqlx::Error::RowNotFound);

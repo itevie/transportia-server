@@ -1,5 +1,5 @@
-use aws_sdk_s3::{Client, Config};
 use aws_sdk_s3::config::Credentials;
+use aws_sdk_s3::{Client, Config};
 use aws_smithy_types::byte_stream::ByteStream;
 
 pub async fn create_r2_client() -> Client {
@@ -7,20 +7,11 @@ pub async fn create_r2_client() -> Client {
     let access_key = std::env::var("R2_ACCESS_KEY_ID").unwrap();
     let secret_key = std::env::var("R2_SECRET_ACCESS_KEY").unwrap();
 
-    let credentials = Credentials::new(
-        access_key,
-        secret_key,
-        None,
-        None,
-        "r2",
-    );
+    let credentials = Credentials::new(access_key, secret_key, None, None, "r2");
 
     let config = Config::builder()
         .region(aws_sdk_s3::config::Region::new("auto"))
-        .endpoint_url(format!(
-            "https://{}.r2.cloudflarestorage.com",
-            account_id
-        ))
+        .endpoint_url(format!("https://{}.r2.cloudflarestorage.com", account_id))
         .credentials_provider(credentials)
         .build();
 

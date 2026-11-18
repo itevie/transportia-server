@@ -1,11 +1,10 @@
-
-use axum::extract::{Path, State};
-use axum::http::StatusCode;
-use axum::Json;
 use crate::db::resource::photo::photo::Photos;
 use crate::db::resource::photo::tram_photo_details_def::TramPhotoDetailsUpdate;
-use crate::http::errors::ApiError;
 use crate::http::HttpState;
+use crate::http::errors::ApiError;
+use axum::Json;
+use axum::extract::{Path, State};
+use axum::http::StatusCode;
 
 #[utoipa::path(
     patch,

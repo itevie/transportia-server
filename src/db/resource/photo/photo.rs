@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, PgPool, QueryBuilder, Postgres};
+use sqlx::{FromRow, PgPool, Postgres, QueryBuilder};
 use utoipa::ToSchema;
 
 use crate::db::Database;
@@ -11,7 +11,9 @@ use crate::db::resource::photo::bus_photo_details::BusPhotoDetailsManager;
 use crate::db::resource::photo::bus_photo_details_def::BusPhotoDetails;
 use crate::db::resource::photo::model_bus_photo_details::ModelBusPhotoDetailsManager;
 use crate::db::resource::photo::model_bus_photo_details_def::ModelBusPhotoDetails;
-use crate::db::resource::photo::photo_def::{Photo, PhotoDetails, PhotoFilledOut, PhotoType, PhotoUpdate};
+use crate::db::resource::photo::photo_def::{
+    Photo, PhotoDetails, PhotoFilledOut, PhotoType, PhotoUpdate,
+};
 use crate::db::resource::photo::tram_photo_details::TramPhotoDetailsManager;
 use crate::db::resource::photo::tram_photo_details_def::TramPhotoDetails;
 
@@ -155,9 +157,9 @@ impl Photos {
             WHERE id = $1
             "#,
         )
-            .bind(id)
-            .fetch_optional(&self.pool)
-            .await?;
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await?;
 
         row.map(Photo::try_from).transpose()
     }
@@ -279,15 +281,11 @@ impl Photos {
         }
 
         if let Some(value) = &query.bd_route {
-            builder
-                .push(" AND bd.route_id = ")
-                .push_bind(value);
+            builder.push(" AND bd.route_id = ").push_bind(value);
         }
 
         if let Some(value) = query.bd_operator_id.clone() {
-            builder
-                .push(" AND bd.operator_id = ")
-                .push_bind(value);
+            builder.push(" AND bd.operator_id = ").push_bind(value);
         }
 
         if let Some(value) = query.bd_has_matched_vehicle {
@@ -348,19 +346,15 @@ impl Photos {
 
         match query.order_by.unwrap_or_default() {
             PhotoOrderBy::Oldest => builder.push(" ORDER BY p.created_at ASC"),
-            PhotoOrderBy::Newest
-            | PhotoOrderBy::HighestRated
-            | PhotoOrderBy::LowestRated => builder.push(" ORDER BY p.created_at DESC"),
+            PhotoOrderBy::Newest | PhotoOrderBy::HighestRated | PhotoOrderBy::LowestRated => {
+                builder.push(" ORDER BY p.created_at DESC")
+            }
         };
 
-        builder
-            .push(" LIMIT ")
-            .push_bind(page_length);
+        builder.push(" LIMIT ").push_bind(page_length);
 
         if let Some(offset) = query.offset {
-            builder
-                .push(" OFFSET ")
-                .push_bind(offset.max(0));
+            builder.push(" OFFSET ").push_bind(offset.max(0));
         }
 
         let rows = builder
@@ -389,17 +383,17 @@ impl Photos {
             RETURNING id
             "#,
         )
-            .bind(photo.author_id)
-            .bind(photo_type_to_i64(photo.photo_type))
-            .bind(photo.obj_details_id)
-            .bind(photo.comment_thread)
-            .bind(&photo.file_name)
-            .bind(&photo.uploaded_id)
-            .bind(&photo.title)
-            .bind(&photo.description)
-            .bind(&photo.created_at)
-            .fetch_one(&self.pool)
-            .await?;
+        .bind(photo.author_id)
+        .bind(photo_type_to_i64(photo.photo_type))
+        .bind(photo.obj_details_id)
+        .bind(photo.comment_thread)
+        .bind(&photo.file_name)
+        .bind(&photo.uploaded_id)
+        .bind(&photo.title)
+        .bind(&photo.description)
+        .bind(&photo.created_at)
+        .fetch_one(&self.pool)
+        .await?;
 
         let mut created_photo = photo.clone();
         created_photo.id = id;
@@ -424,18 +418,18 @@ impl Photos {
             WHERE id = $10
             "#,
         )
-            .bind(photo.author_id)
-            .bind(photo_type_to_i64(photo.photo_type))
-            .bind(photo.obj_details_id)
-            .bind(photo.comment_thread)
-            .bind(&photo.file_name)
-            .bind(&photo.uploaded_id)
-            .bind(&photo.title)
-            .bind(&photo.description)
-            .bind(&photo.created_at)
-            .bind(photo.id)
-            .execute(&self.pool)
-            .await?;
+        .bind(photo.author_id)
+        .bind(photo_type_to_i64(photo.photo_type))
+        .bind(photo.obj_details_id)
+        .bind(photo.comment_thread)
+        .bind(&photo.file_name)
+        .bind(&photo.uploaded_id)
+        .bind(&photo.title)
+        .bind(&photo.description)
+        .bind(&photo.created_at)
+        .bind(photo.id)
+        .execute(&self.pool)
+        .await?;
 
         Ok(())
     }
@@ -446,9 +440,7 @@ impl Photos {
         let mut has_fields = false;
 
         if let Some(value) = &update.title {
-            separated
-                .push("title = ")
-                .push_bind_unseparated(value);
+            separated.push("title = ").push_bind_unseparated(value);
             has_fields = true;
         }
 
@@ -463,26 +455,15 @@ impl Photos {
             return Ok(());
         }
 
-        builder
-            .push(" WHERE id = ")
-            .push_bind(id);
+        builder.push(" WHERE id = ").push_bind(id);
 
         builder.build().execute(&self.pool).await?;
 
         Ok(())
     }
 
-    pub async fn delete(
-        &self,
-        db: Arc<Database>,
-        id: i64,
-        user_id: i64,
-    ) -> sqlx::Result<()> {
-        let photo = db
-            .photos
-            .get(id)
-            .await?
-            .ok_or(sqlx::Error::RowNotFound)?;
+    pub async fn delete(&self, db: Arc<Database>, id: i64, user_id: i64) -> sqlx::Result<()> {
+        let photo = db.photos.get(id).await?.ok_or(sqlx::Error::RowNotFound)?;
 
         sqlx::query("DELETE FROM photos WHERE id = $1")
             .bind(id)
@@ -506,10 +487,7 @@ impl Photos {
         Ok(())
     }
 
-    pub async fn get_or_create_comment_thread(
-        &self,
-        photo_id: i64,
-    ) -> sqlx::Result<i64> {
+    pub async fn get_or_create_comment_thread(&self, photo_id: i64) -> sqlx::Result<i64> {
         let mut tx = self.pool.begin().await?;
 
         // Lock the photo row so concurrent requests don't create multiple
@@ -517,10 +495,10 @@ impl Photos {
         let existing = sqlx::query_scalar::<_, Option<i64>>(
             "SELECT comment_thread FROM photos WHERE id = $1 FOR UPDATE",
         )
-            .bind(photo_id)
-            .fetch_optional(&mut *tx)
-            .await?
-            .ok_or(sqlx::Error::RowNotFound)?;
+        .bind(photo_id)
+        .fetch_optional(&mut *tx)
+        .await?
+        .ok_or(sqlx::Error::RowNotFound)?;
 
         if let Some(thread_id) = existing {
             tx.commit().await?;
@@ -532,9 +510,9 @@ impl Photos {
         let thread_id = sqlx::query_scalar::<_, i64>(
             "INSERT INTO comment_threads (created_at) VALUES ($1) RETURNING id",
         )
-            .bind(now)
-            .fetch_one(&mut *tx)
-            .await?;
+        .bind(now)
+        .fetch_one(&mut *tx)
+        .await?;
 
         sqlx::query(
             r#"
@@ -543,10 +521,10 @@ impl Photos {
             WHERE id = $2
             "#,
         )
-            .bind(thread_id)
-            .bind(photo_id)
-            .execute(&mut *tx)
-            .await?;
+        .bind(thread_id)
+        .bind(photo_id)
+        .execute(&mut *tx)
+        .await?;
 
         tx.commit().await?;
 
@@ -690,8 +668,7 @@ impl Photos {
         for photo in photos {
             let details = match photo.photo_type {
                 PhotoType::Bus => {
-                    let details =
-                        Self::get_bus_details(db.clone(), photo.clone()).await?;
+                    let details = Self::get_bus_details(db.clone(), photo.clone()).await?;
 
                     let filled_out_details =
                         BusPhotoDetailsManager::fill_out(db.clone(), details).await?;
@@ -699,8 +676,7 @@ impl Photos {
                     Some(PhotoDetails::Bus(filled_out_details))
                 }
                 PhotoType::Tram => {
-                    let details =
-                        Self::get_tram_details(db.clone(), photo.clone()).await?;
+                    let details = Self::get_tram_details(db.clone(), photo.clone()).await?;
 
                     let filled_out_details =
                         TramPhotoDetailsManager::fill_out(db.clone(), details).await?;
@@ -708,8 +684,7 @@ impl Photos {
                     Some(PhotoDetails::Tram(filled_out_details))
                 }
                 PhotoType::ModelBus => {
-                    let details =
-                        Self::get_model_bus_details(db.clone(), photo.clone()).await?;
+                    let details = Self::get_model_bus_details(db.clone(), photo.clone()).await?;
 
                     let filled_out_details =
                         ModelBusPhotoDetailsManager::fill_out(db.clone(), details).await?;
@@ -734,11 +709,7 @@ impl Photos {
                 None => None,
             };
 
-            let comment_thread = Some(
-                db.photos
-                    .get_or_create_comment_thread(photo.id)
-                    .await?,
-            );
+            let comment_thread = Some(db.photos.get_or_create_comment_thread(photo.id).await?);
 
             filled_out.push(PhotoFilledOut {
                 id: photo.id,

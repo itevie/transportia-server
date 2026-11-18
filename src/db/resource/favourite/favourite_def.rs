@@ -1,7 +1,3 @@
-use std::str::FromStr;
-use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
-use utoipa::ToSchema;
 use crate::db::resource::bustimes::livery_def::BtLivery;
 use crate::db::resource::bustimes::vehicle_def::FilledOutBtVehicle;
 use crate::db::resource::bustimes::vehicle_type_def::BtVehicleType;
@@ -11,6 +7,10 @@ use crate::db::resource::photo::photo_def::PhotoFilledOut;
 use crate::db::resource::tram::tram_def::TramFilledOut;
 use crate::db::resource::transxchange::line_def::TxLine;
 use crate::db::resource::transxchange::operator_def::TxOperator;
+use serde::{Deserialize, Serialize};
+use sqlx::FromRow;
+use std::str::FromStr;
+use utoipa::ToSchema;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, ToSchema)]
 #[repr(i64)]
@@ -23,7 +23,7 @@ pub enum FavouriteType {
     Service = 5,
     Comment = 6,
     Tram = 7,
-    ModelBus = 8
+    ModelBus = 8,
 }
 
 impl sqlx::Type<sqlx::Postgres> for FavouriteType {
@@ -41,17 +41,12 @@ impl<'q> sqlx::Encode<'q, sqlx::Postgres> for FavouriteType {
         &self,
         buf: &mut sqlx::postgres::PgArgumentBuffer,
     ) -> Result<sqlx::encode::IsNull, sqlx::error::BoxDynError> {
-        <i64 as sqlx::Encode<'q, sqlx::Postgres>>::encode_by_ref(
-            &(*self as i64),
-            buf,
-        )
+        <i64 as sqlx::Encode<'q, sqlx::Postgres>>::encode_by_ref(&(*self as i64), buf)
     }
 }
 
 impl<'r> sqlx::Decode<'r, sqlx::Postgres> for FavouriteType {
-    fn decode(
-        value: sqlx::postgres::PgValueRef<'r>,
-    ) -> Result<Self, sqlx::error::BoxDynError> {
+    fn decode(value: sqlx::postgres::PgValueRef<'r>) -> Result<Self, sqlx::error::BoxDynError> {
         let value = <i64 as sqlx::Decode<sqlx::Postgres>>::decode(value)?;
 
         match value {
@@ -95,7 +90,7 @@ pub struct Favourite {
     pub target_id: String,
     pub target_type: FavouriteType,
     pub created_at: String,
-    pub group: Option<i64>
+    pub group: Option<i64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, FromRow)]
@@ -106,7 +101,7 @@ pub struct FavouriteFilled {
     pub target_type: FavouriteType,
     pub created_at: String,
     pub group: Option<i64>,
-    pub object: FavouriteObject
+    pub object: FavouriteObject,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -120,5 +115,5 @@ pub enum FavouriteObject {
     BusPhoto(PhotoFilledOut),
     Comment(CommentFilledOut),
     Tram(TramFilledOut),
-    ModelBus(ModelBusFilledOut)
+    ModelBus(ModelBusFilledOut),
 }

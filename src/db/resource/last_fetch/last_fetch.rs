@@ -1,6 +1,5 @@
-
-use sqlx::PgPool;
 use crate::db::resource::last_fetch::last_fetch_def::LastFetches;
+use sqlx::PgPool;
 
 pub static SQL_LAST_FETCHES: &str = r#"
 CREATE TABLE IF NOT EXISTS last_fetches (
@@ -44,8 +43,8 @@ impl LastFetchesDb {
             ON CONFLICT (id) DO NOTHING
             "#,
         )
-            .execute(&mut *transaction)
-            .await?;
+        .execute(&mut *transaction)
+        .await?;
 
         let last_fetches = sqlx::query_as::<_, LastFetches>(
             r#"
@@ -54,8 +53,8 @@ impl LastFetchesDb {
             WHERE id = 1
             "#,
         )
-            .fetch_one(&mut *transaction)
-            .await?;
+        .fetch_one(&mut *transaction)
+        .await?;
 
         transaction.commit().await?;
 
@@ -63,10 +62,7 @@ impl LastFetchesDb {
     }
 
     pub async fn set(&self, fetch: LastFetch) -> sqlx::Result<()> {
-        let now = chrono::Utc::now().to_rfc3339_opts(
-            chrono::SecondsFormat::Secs,
-            true,
-        );
+        let now = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
 
         let mut transaction = self.pool.begin().await?;
 
@@ -77,25 +73,17 @@ impl LastFetchesDb {
             ON CONFLICT (id) DO NOTHING
             "#,
         )
-            .execute(&mut *transaction)
-            .await?;
+        .execute(&mut *transaction)
+        .await?;
 
         let query = match fetch {
-            LastFetch::BtLiveries => {
-                "UPDATE last_fetches SET bt_liveries = $1 WHERE id = 1"
-            }
-            LastFetch::BtOperators => {
-                "UPDATE last_fetches SET bt_operators = $1 WHERE id = 1"
-            }
+            LastFetch::BtLiveries => "UPDATE last_fetches SET bt_liveries = $1 WHERE id = 1",
+            LastFetch::BtOperators => "UPDATE last_fetches SET bt_operators = $1 WHERE id = 1",
             LastFetch::BtVehicleTypes => {
                 "UPDATE last_fetches SET bt_vehicle_types = $1 WHERE id = 1"
             }
-            LastFetch::BtVehicles => {
-                "UPDATE last_fetches SET bt_vehicles = $1 WHERE id = 1"
-            }
-            LastFetch::ModelsMbc => {
-                "UPDATE last_fetches SET models_mbc = $1 WHERE id = 1"
-            }
+            LastFetch::BtVehicles => "UPDATE last_fetches SET bt_vehicles = $1 WHERE id = 1",
+            LastFetch::ModelsMbc => "UPDATE last_fetches SET models_mbc = $1 WHERE id = 1",
             LastFetch::ModelsTtcdiecast => {
                 "UPDATE last_fetches SET models_ttcdiecast = $1 WHERE id = 1"
             }

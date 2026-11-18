@@ -9,5 +9,5 @@ pub struct TxOperator {
     pub code: Option<String>,
     pub short_name: String,
     pub licence_number: Option<String>,
-    pub comment_thread: Option<i64>
+    pub comment_thread: Option<i64>,
 }

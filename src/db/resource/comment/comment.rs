@@ -53,15 +53,12 @@ impl Comments {
             WHERE id = $1
             "#,
         )
-            .bind(id)
-            .fetch_optional(&self.pool)
-            .await
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
     }
 
-    pub async fn get_by_thread(
-        &self,
-        thread: i64,
-    ) -> sqlx::Result<Vec<Comment>> {
+    pub async fn get_by_thread(&self, thread: i64) -> sqlx::Result<Vec<Comment>> {
         sqlx::query_as::<_, Comment>(
             r#"
             SELECT *
@@ -70,15 +67,12 @@ impl Comments {
             ORDER BY created_at DESC, id DESC
             "#,
         )
-            .bind(thread)
-            .fetch_all(&self.pool)
-            .await
+        .bind(thread)
+        .fetch_all(&self.pool)
+        .await
     }
 
-    pub async fn get_replies(
-        &self,
-        parent_comment_id: i64,
-    ) -> sqlx::Result<Vec<Comment>> {
+    pub async fn get_replies(&self, parent_comment_id: i64) -> sqlx::Result<Vec<Comment>> {
         sqlx::query_as::<_, Comment>(
             r#"
             SELECT *
@@ -87,9 +81,9 @@ impl Comments {
             ORDER BY created_at ASC, id ASC
             "#,
         )
-            .bind(parent_comment_id)
-            .fetch_all(&self.pool)
-            .await
+        .bind(parent_comment_id)
+        .fetch_all(&self.pool)
+        .await
     }
 
     pub async fn create(
@@ -116,13 +110,13 @@ impl Comments {
             RETURNING *
             "#,
         )
-            .bind(thread)
-            .bind(author_id)
-            .bind(body)
-            .bind(parent_comment_id)
-            .bind(created_at)
-            .fetch_one(&self.pool)
-            .await
+        .bind(thread)
+        .bind(author_id)
+        .bind(body)
+        .bind(parent_comment_id)
+        .bind(created_at)
+        .fetch_one(&self.pool)
+        .await
     }
 
     pub async fn update(&self, comment: &Comment) -> sqlx::Result<()> {
@@ -135,36 +129,27 @@ impl Comments {
             WHERE id = $3
             "#,
         )
-            .bind(&comment.body)
-            .bind(Utc::now().to_rfc3339())
-            .bind(comment.id)
-            .execute(&self.pool)
-            .await?;
+        .bind(&comment.body)
+        .bind(Utc::now().to_rfc3339())
+        .bind(comment.id)
+        .execute(&self.pool)
+        .await?;
 
         Ok(())
     }
 
-    pub async fn search(
-        &self,
-        query: &CommentQuery,
-    ) -> sqlx::Result<Vec<Comment>> {
+    pub async fn search(&self, query: &CommentQuery) -> sqlx::Result<Vec<Comment>> {
         let page_length = query.page_length.unwrap_or(50).clamp(1, 1000);
         let offset = query.offset.unwrap_or(0).max(0);
 
-        let mut builder = QueryBuilder::<Postgres>::new(
-            "SELECT * FROM comments WHERE TRUE",
-        );
+        let mut builder = QueryBuilder::<Postgres>::new("SELECT * FROM comments WHERE TRUE");
 
         if let Some(thread) = query.thread {
-            builder
-                .push(" AND thread = ")
-                .push_bind(thread);
+            builder.push(" AND thread = ").push_bind(thread);
         }
 
         if let Some(author_id) = query.author_id {
-            builder
-                .push(" AND author_id = ")
-                .push_bind(author_id);
+            builder.push(" AND author_id = ").push_bind(author_id);
         }
 
         if let Some(parent_comment_id) = query.parent_comment_id {
@@ -233,9 +218,7 @@ impl Comments {
         let mut filled_out = Vec::with_capacity(comments.len());
 
         for comment in comments {
-            filled_out.push(
-                Self::fill_out(db.clone(), comment, user_id).await?,
-            );
+            filled_out.push(Self::fill_out(db.clone(), comment, user_id).await?);
         }
 
         Ok(filled_out)

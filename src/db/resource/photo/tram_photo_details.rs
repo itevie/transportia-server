@@ -3,7 +3,9 @@ use std::sync::Arc;
 use sqlx::PgPool;
 
 use crate::db::Database;
-use crate::db::resource::photo::tram_photo_details_def::{TramPhotoDetails, TramPhotoDetailsFilledOut, TramPhotoDetailsUpdate};
+use crate::db::resource::photo::tram_photo_details_def::{
+    TramPhotoDetails, TramPhotoDetailsFilledOut, TramPhotoDetailsUpdate,
+};
 use crate::db::resource::tram::tram::Trams;
 use crate::db::resource::tram::tram_def::TramFilledOut;
 
@@ -29,10 +31,7 @@ impl TramPhotoDetailsManager {
         Self { pool }
     }
 
-    pub async fn get(
-        &self,
-        id: i64,
-    ) -> sqlx::Result<Option<TramPhotoDetails>> {
+    pub async fn get(&self, id: i64) -> sqlx::Result<Option<TramPhotoDetails>> {
         sqlx::query_as::<_, TramPhotoDetails>(
             r#"
             SELECT
@@ -47,15 +46,12 @@ impl TramPhotoDetailsManager {
             WHERE id = $1
             "#,
         )
-            .bind(id)
-            .fetch_optional(&self.pool)
-            .await
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
     }
 
-    pub async fn create(
-        &self,
-        details: &TramPhotoDetails,
-    ) -> sqlx::Result<i64> {
+    pub async fn create(&self, details: &TramPhotoDetails) -> sqlx::Result<i64> {
         sqlx::query_scalar::<_, i64>(
             r#"
             INSERT INTO tram_photo_details (
@@ -70,21 +66,17 @@ impl TramPhotoDetailsManager {
             RETURNING id
             "#,
         )
-            .bind(details.matched_vehicle_id)
-            .bind(details.override_match)
-            .bind(&details.fleet)
-            .bind(details.livery_id)
-            .bind(details.vehicle_type_id)
-            .bind(details.operator_id)
-            .fetch_one(&self.pool)
-            .await
+        .bind(details.matched_vehicle_id)
+        .bind(details.override_match)
+        .bind(&details.fleet)
+        .bind(details.livery_id)
+        .bind(details.vehicle_type_id)
+        .bind(details.operator_id)
+        .fetch_one(&self.pool)
+        .await
     }
 
-    pub async fn update(
-        &self,
-        id: i64,
-        update: &TramPhotoDetailsUpdate,
-    ) -> sqlx::Result<()> {
+    pub async fn update(&self, id: i64, update: &TramPhotoDetailsUpdate) -> sqlx::Result<()> {
         sqlx::query(
             r#"
             UPDATE tram_photo_details SET
@@ -97,23 +89,20 @@ impl TramPhotoDetailsManager {
             WHERE id = $7
             "#,
         )
-            .bind(update.matched_vehicle_id)
-            .bind(update.override_match)
-            .bind(&update.fleet)
-            .bind(update.livery_id)
-            .bind(update.vehicle_type_id)
-            .bind(update.operator_id)
-            .bind(id)
-            .execute(&self.pool)
-            .await?;
+        .bind(update.matched_vehicle_id)
+        .bind(update.override_match)
+        .bind(&update.fleet)
+        .bind(update.livery_id)
+        .bind(update.vehicle_type_id)
+        .bind(update.operator_id)
+        .bind(id)
+        .execute(&self.pool)
+        .await?;
 
         Ok(())
     }
 
-    pub async fn delete(
-        &self,
-        id: i64,
-    ) -> sqlx::Result<()> {
+    pub async fn delete(&self, id: i64) -> sqlx::Result<()> {
         sqlx::query("DELETE FROM tram_photo_details WHERE id = $1")
             .bind(id)
             .execute(&self.pool)
@@ -142,21 +131,13 @@ impl TramPhotoDetailsManager {
         };
 
         let matched: Option<TramFilledOut> = match details.matched_vehicle_id {
-            Some(id) => {
-                match db.trams.get(id).await? {
-                    Some(tram) => {
-                        Trams::fill_out(
-                            db.clone(),
-                            vec![tram],
-                            None,
-                        )
-                            .await?
-                            .into_iter()
-                            .next()
-                    }
-                    None => None,
-                }
-            }
+            Some(id) => match db.trams.get(id).await? {
+                Some(tram) => Trams::fill_out(db.clone(), vec![tram], None)
+                    .await?
+                    .into_iter()
+                    .next(),
+                None => None,
+            },
             None => None,
         };
 

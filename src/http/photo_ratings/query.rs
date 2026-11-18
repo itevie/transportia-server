@@ -1,9 +1,9 @@
-use axum::extract::{Path, State};
-use axum::Json;
 use crate::extractors::authenticator::AuthUser;
-use crate::http::errors::ApiError;
 use crate::http::HttpState;
+use crate::http::errors::ApiError;
 use crate::http::photo_ratings::manage::PhotoRatingResponse;
+use axum::Json;
+use axum::extract::{Path, State};
 
 #[utoipa::path(
     get,

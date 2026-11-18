@@ -1,41 +1,53 @@
 pub mod big_search;
 mod bustimes;
-mod util;
 pub mod macros;
 pub mod resource;
+mod util;
 
 use std::sync::Arc;
 
-use sqlx::{PgPool};
-use sqlx::postgres::PgPoolOptions;
 use crate::db::resource::bustimes::livery::{BtLiveries, SQL_BT_LIVERY};
 use crate::db::resource::bustimes::vehicle::{BtVehicles, SQL_BT_VEHICLE};
 use crate::db::resource::bustimes::vehicle_type::{BtVehicleTypes, SQL_BT_VEHICLE_TYPE};
 use crate::db::resource::checklist::checklist::{RouteChecklists, SQL_ROUTE_CHECKLISTS};
-use crate::db::resource::checklist::checklist_item::{RouteChecklistItems, SQL_ROUTE_CHECKLIST_ITEMS};
+use crate::db::resource::checklist::checklist_item::{
+    RouteChecklistItems, SQL_ROUTE_CHECKLIST_ITEMS,
+};
 use crate::db::resource::comment::comment::{Comments, SQL_COMMENT};
 use crate::db::resource::comment::comment_thread::{CommentThreads, SQL_COMMENT_THREAD};
 use crate::db::resource::favourite::favourite::{Favourites, SQL_FAVOURITE};
 use crate::db::resource::favourite::favourite_group::{FavouriteGroups, SQL_FAVOURITES_GROUPS};
 use crate::db::resource::last_fetch::last_fetch::{LastFetchesDb, SQL_LAST_FETCHES};
 use crate::db::resource::model_bus::model_bus::{ModelBuses, SQL_MODEL_BUSES};
-use crate::db::resource::model_bus::model_bus_ownership::{ModelBusOwnerships, SQL_MODEL_BUS_OWNERSHIPS};
+use crate::db::resource::model_bus::model_bus_ownership::{
+    ModelBusOwnerships, SQL_MODEL_BUS_OWNERSHIPS,
+};
 use crate::db::resource::model_bus_listings::model_bus_listing::{BusListings, SQL_BUS_LISTING};
-use crate::db::resource::photo::bus_photo_details::{BusPhotoDetailsManager, SQL_BUS_PHOTO_DETAILS};
-use crate::db::resource::photo::model_bus_photo_details::{ModelBusPhotoDetailsManager, SQL_MODEL_BUS_PHOTO_DETAILS};
+use crate::db::resource::photo::bus_photo_details::{
+    BusPhotoDetailsManager, SQL_BUS_PHOTO_DETAILS,
+};
+use crate::db::resource::photo::model_bus_photo_details::{
+    ModelBusPhotoDetailsManager, SQL_MODEL_BUS_PHOTO_DETAILS,
+};
 use crate::db::resource::photo::photo::{Photos, SQL_PHOTOS};
-use crate::db::resource::photo::tram_photo_details::{TramPhotoDetailsManager, SQL_TRAM_PHOTO_DETAILS};
+use crate::db::resource::photo::tram_photo_details::{
+    SQL_TRAM_PHOTO_DETAILS, TramPhotoDetailsManager,
+};
 use crate::db::resource::star_rating::star_rating::{PhotoRatings, SQL_PHOTO_RATING};
-use crate::db::resource::tram::tram::{Trams, SQL_TRAM};
-use crate::db::resource::tram::tram_announcement_audio::{TramAnnouncementAudios, SQL_TRAM_ANNOUNCEMENT_AUDIO};
-use crate::db::resource::tram::tram_livery::{TramLiveries, SQL_TRAM_LIVERY};
-use crate::db::resource::tram::tram_operator::{TramOperators, SQL_TRAM_OPERATOR};
+use crate::db::resource::tram::tram::{SQL_TRAM, Trams};
+use crate::db::resource::tram::tram_announcement_audio::{
+    SQL_TRAM_ANNOUNCEMENT_AUDIO, TramAnnouncementAudios,
+};
+use crate::db::resource::tram::tram_livery::{SQL_TRAM_LIVERY, TramLiveries};
+use crate::db::resource::tram::tram_operator::{SQL_TRAM_OPERATOR, TramOperators};
 use crate::db::resource::tram::tram_route::SQL_TRAM_ROUTE;
 use crate::db::resource::tram::tram_stop::SQL_TRAM_STOP;
-use crate::db::resource::tram::tram_type::{TramTypes, SQL_TRAM_TYPE};
-use crate::db::resource::transxchange::line::{TxLines, SQL_TX_LINE};
-use crate::db::resource::transxchange::operator::{TxOperators, SQL_TX_OPERATOR};
-use crate::db::resource::user::{Users, SQL_USER};
+use crate::db::resource::tram::tram_type::{SQL_TRAM_TYPE, TramTypes};
+use crate::db::resource::transxchange::line::{SQL_TX_LINE, TxLines};
+use crate::db::resource::transxchange::operator::{SQL_TX_OPERATOR, TxOperators};
+use crate::db::resource::user::{SQL_USER, Users};
+use sqlx::PgPool;
+use sqlx::postgres::PgPoolOptions;
 
 #[derive(Clone)]
 pub struct Database {
@@ -81,9 +93,7 @@ pub async fn init_db() -> Result<Database, Box<dyn std::error::Error>> {
             sqlx::query($sql)
                 .execute(&pool)
                 .await
-                .map_err(|e| {
-                    format!("Error with {}: {}", stringify!($sql), e)
-                })?;
+                .map_err(|e| format!("Error with {}: {}", stringify!($sql), e))?;
         };
     }
 
@@ -158,8 +168,6 @@ pub async fn init_db() -> Result<Database, Box<dyn std::error::Error>> {
 
     Ok(db)
 }
-
-
 
 pub async fn create_missing_comment_threads(
     db: Arc<Database>,
@@ -269,9 +277,7 @@ pub async fn create_missing_comment_threads(
         }
     };
 
-    let result = sqlx::query(query)
-        .execute(&mut *tx)
-        .await?;
+    let result = sqlx::query(query).execute(&mut *tx).await?;
 
     println!(
         "Created {} comment threads for {}",

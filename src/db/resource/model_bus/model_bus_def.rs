@@ -1,13 +1,12 @@
-
-use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
-use utoipa::ToSchema;
 use crate::db::resource::bustimes::livery_def::BtLivery;
 use crate::db::resource::bustimes::vehicle_def::BtVehicle;
 use crate::db::resource::bustimes::vehicle_type_def::BtVehicleType;
 use crate::db::resource::photo::photo_def::Photo;
 use crate::db::resource::transxchange::line_def::TxLine;
 use crate::db::resource::transxchange::operator_def::TxOperator;
+use serde::{Deserialize, Serialize};
+use sqlx::FromRow;
+use utoipa::ToSchema;
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, FromRow)]
 pub struct ModelBus {

@@ -1,17 +1,17 @@
-use axum::extract::State;
-use axum::http::StatusCode;
-use axum::Json;
-use axum::response::{IntoResponse, Response};
-use serde::Deserialize;
-use utoipa::ToSchema;
 use crate::http::HttpState;
 use crate::http::errors::ApiError;
 use crate::util;
+use axum::Json;
+use axum::extract::State;
+use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
+use serde::Deserialize;
+use utoipa::ToSchema;
 
 #[derive(Deserialize, ToSchema)]
 pub struct LoginBody {
     pub email: String,
-    pub password: String
+    pub password: String,
 }
 
 #[utoipa::path(
@@ -40,9 +40,15 @@ pub async fn login(
         return Err(ApiError::EmailDoesNotExist);
     }
 
-    let user = match state.db.users.check_password(&user.email, &user.password).await.map_err(|err| ApiError::Database(err.to_string()))? {
+    let user = match state
+        .db
+        .users
+        .check_password(&user.email, &user.password)
+        .await
+        .map_err(|err| ApiError::Database(err.to_string()))?
+    {
         Some(user) => user,
-        None => return Err(ApiError::UserNotFound)
+        None => return Err(ApiError::UserNotFound),
     };
 
     let jwt = util::jwt::create_jwt(user, "my-cute-secret-which-no-one-will-crack")

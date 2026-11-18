@@ -1,8 +1,7 @@
-
-use sqlx::{PgPool, Postgres, QueryBuilder};
-use serde::Deserialize;
-use utoipa::{IntoParams, ToSchema};
 use crate::db::resource::transxchange::line_def::TxLine;
+use serde::Deserialize;
+use sqlx::{PgPool, Postgres, QueryBuilder};
+use utoipa::{IntoParams, ToSchema};
 
 pub static SQL_TX_LINE: &str = r#"
 CREATE TABLE IF NOT EXISTS tx_lines (
@@ -63,15 +62,12 @@ impl TxLines {
             WHERE tx_id = $1
             "#,
         )
-            .bind(tx_id)
-            .fetch_optional(&self.pool)
-            .await
+        .bind(tx_id)
+        .fetch_optional(&self.pool)
+        .await
     }
 
-    pub async fn search(
-        &self,
-        query: &TxLineQuery,
-    ) -> sqlx::Result<Vec<TxLine>> {
+    pub async fn search(&self, query: &TxLineQuery) -> sqlx::Result<Vec<TxLine>> {
         let mut builder = QueryBuilder::<Postgres>::new(
             r#"
             SELECT
@@ -101,9 +97,7 @@ impl TxLines {
         }
 
         if let Some(value) = &query.operator_code {
-            builder
-                .push(" AND operator_code = ")
-                .push_bind(value);
+            builder.push(" AND operator_code = ").push_bind(value);
         }
 
         if let Some(value) = &query.operator_national_code {
@@ -187,10 +181,7 @@ impl TxLines {
             .await
     }
 
-    pub async fn get_by_line_id(
-        &self,
-        line_id: &str,
-    ) -> sqlx::Result<Option<TxLine>> {
+    pub async fn get_by_line_id(&self, line_id: &str) -> sqlx::Result<Option<TxLine>> {
         sqlx::query_as::<_, TxLine>(
             r#"
             SELECT
@@ -206,15 +197,12 @@ impl TxLines {
             WHERE line_id = $1
             "#,
         )
-            .bind(line_id)
-            .fetch_optional(&self.pool)
-            .await
+        .bind(line_id)
+        .fetch_optional(&self.pool)
+        .await
     }
 
-    pub async fn get_by_service_code(
-        &self,
-        service_code: &str,
-    ) -> sqlx::Result<Vec<TxLine>> {
+    pub async fn get_by_service_code(&self, service_code: &str) -> sqlx::Result<Vec<TxLine>> {
         sqlx::query_as::<_, TxLine>(
             r#"
             SELECT
@@ -231,15 +219,12 @@ impl TxLines {
             ORDER BY name
             "#,
         )
-            .bind(service_code)
-            .fetch_all(&self.pool)
-            .await
+        .bind(service_code)
+        .fetch_all(&self.pool)
+        .await
     }
 
-    pub async fn get_by_operator_code(
-        &self,
-        operator_code: &str,
-    ) -> sqlx::Result<Vec<TxLine>> {
+    pub async fn get_by_operator_code(&self, operator_code: &str) -> sqlx::Result<Vec<TxLine>> {
         sqlx::query_as::<_, TxLine>(
             r#"
             SELECT
@@ -256,9 +241,9 @@ impl TxLines {
             ORDER BY name
             "#,
         )
-            .bind(operator_code)
-            .fetch_all(&self.pool)
-            .await
+        .bind(operator_code)
+        .fetch_all(&self.pool)
+        .await
     }
 
     pub async fn get_by_national_operator_code(
@@ -281,9 +266,9 @@ impl TxLines {
             ORDER BY name
             "#,
         )
-            .bind(national_code)
-            .fetch_all(&self.pool)
-            .await
+        .bind(national_code)
+        .fetch_all(&self.pool)
+        .await
     }
 
     pub async fn create(&self, line: &TxLine) -> sqlx::Result<()> {
@@ -302,16 +287,16 @@ impl TxLines {
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             "#,
         )
-            .bind(&line.tx_id)
-            .bind(&line.name)
-            .bind(&line.operator_code)
-            .bind(&line.operator_national_code)
-            .bind(&line.line_id)
-            .bind(&line.service_code)
-            .bind(&line.outbound_description)
-            .bind(&line.inbound_description)
-            .execute(&self.pool)
-            .await?;
+        .bind(&line.tx_id)
+        .bind(&line.name)
+        .bind(&line.operator_code)
+        .bind(&line.operator_national_code)
+        .bind(&line.line_id)
+        .bind(&line.service_code)
+        .bind(&line.outbound_description)
+        .bind(&line.inbound_description)
+        .execute(&self.pool)
+        .await?;
 
         Ok(())
     }
@@ -340,24 +325,21 @@ impl TxLines {
                 inbound_description = EXCLUDED.inbound_description
             "#,
         )
-            .bind(&line.tx_id)
-            .bind(&line.name)
-            .bind(&line.operator_code)
-            .bind(&line.operator_national_code)
-            .bind(&line.line_id)
-            .bind(&line.service_code)
-            .bind(&line.outbound_description)
-            .bind(&line.inbound_description)
-            .execute(&self.pool)
-            .await?;
+        .bind(&line.tx_id)
+        .bind(&line.name)
+        .bind(&line.operator_code)
+        .bind(&line.operator_national_code)
+        .bind(&line.line_id)
+        .bind(&line.service_code)
+        .bind(&line.outbound_description)
+        .bind(&line.inbound_description)
+        .execute(&self.pool)
+        .await?;
 
         Ok(())
     }
 
-    pub async fn upsert_many(
-        &self,
-        lines: &[TxLine],
-    ) -> sqlx::Result<()> {
+    pub async fn upsert_many(&self, lines: &[TxLine]) -> sqlx::Result<()> {
         let mut transaction = self.pool.begin().await?;
 
         for line in lines {
@@ -384,16 +366,16 @@ impl TxLines {
                     inbound_description = EXCLUDED.inbound_description
                 "#,
             )
-                .bind(&line.tx_id)
-                .bind(&line.name)
-                .bind(&line.operator_code)
-                .bind(&line.operator_national_code)
-                .bind(&line.line_id)
-                .bind(&line.service_code)
-                .bind(&line.outbound_description)
-                .bind(&line.inbound_description)
-                .execute(&mut *transaction)
-                .await?;
+            .bind(&line.tx_id)
+            .bind(&line.name)
+            .bind(&line.operator_code)
+            .bind(&line.operator_national_code)
+            .bind(&line.line_id)
+            .bind(&line.service_code)
+            .bind(&line.outbound_description)
+            .bind(&line.inbound_description)
+            .execute(&mut *transaction)
+            .await?;
         }
 
         transaction.commit().await?;

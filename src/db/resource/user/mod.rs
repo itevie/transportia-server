@@ -1,9 +1,9 @@
 pub mod def;
 
-use sqlx::{PgPool, Postgres, QueryBuilder};
-use serde::Deserialize;
-use utoipa::{IntoParams, ToSchema};
 use crate::db::resource::user::def::User;
+use serde::Deserialize;
+use sqlx::{PgPool, Postgres, QueryBuilder};
+use utoipa::{IntoParams, ToSchema};
 
 pub static SQL_USER: &str = r#"
 CREATE TABLE IF NOT EXISTS users (
@@ -35,11 +35,7 @@ impl Users {
         Self { pool }
     }
 
-    pub async fn get(
-        &self,
-        id: i64,
-        include_sensitive: bool,
-    ) -> sqlx::Result<Option<User>> {
+    pub async fn get(&self, id: i64, include_sensitive: bool) -> sqlx::Result<Option<User>> {
         sqlx::query_as::<_, User>(
             r#"
             SELECT
@@ -53,18 +49,15 @@ impl Users {
                 ''::TEXT AS password_hash
             FROM users
             WHERE id = $1
-            "#
+            "#,
         )
-            .bind(id)
-            .bind(include_sensitive)
-            .fetch_optional(&self.pool)
-            .await
+        .bind(id)
+        .bind(include_sensitive)
+        .fetch_optional(&self.pool)
+        .await
     }
 
-    pub async fn get_by_username(
-        &self,
-        username: &str,
-    ) -> sqlx::Result<Option<User>> {
+    pub async fn get_by_username(&self, username: &str) -> sqlx::Result<Option<User>> {
         sqlx::query_as::<_, User>(
             r#"
             SELECT
@@ -78,11 +71,11 @@ impl Users {
                 ''::TEXT AS password_hash
             FROM users
             WHERE username = $1
-            "#
+            "#,
         )
-            .bind(username.to_lowercase())
-            .fetch_optional(&self.pool)
-            .await
+        .bind(username.to_lowercase())
+        .fetch_optional(&self.pool)
+        .await
     }
 
     pub async fn get_by_email(
@@ -103,21 +96,16 @@ impl Users {
                 CASE WHEN $2 THEN password_hash ELSE ''::TEXT END AS password_hash
             FROM users
             WHERE email = $1
-            "#
+            "#,
         )
-            .bind(email.to_lowercase())
-            .bind(include_sensitive)
-            .fetch_optional(&self.pool)
-            .await
+        .bind(email.to_lowercase())
+        .bind(include_sensitive)
+        .fetch_optional(&self.pool)
+        .await
     }
 
-    pub async fn search(
-        &self,
-        query: &UserQuery,
-    ) -> sqlx::Result<Vec<User>> {
-        let page_length = query.page_length
-            .map(|x| x.min(1000))
-            .unwrap_or(50);
+    pub async fn search(&self, query: &UserQuery) -> sqlx::Result<Vec<User>> {
+        let page_length = query.page_length.map(|x| x.min(1000)).unwrap_or(50);
 
         let mut builder = QueryBuilder::<Postgres>::new(
             r#"
@@ -132,7 +120,7 @@ impl Users {
                 ''::TEXT AS password_hash
             FROM users
             WHERE TRUE
-            "#
+            "#,
         );
 
         if let Some(value) = query.search.as_deref() {
@@ -148,28 +136,16 @@ impl Users {
 
         builder.push(" ORDER BY username");
 
-        builder
-            .push(" LIMIT ")
-            .push_bind(page_length);
+        builder.push(" LIMIT ").push_bind(page_length);
 
         if let Some(offset) = query.offset {
-            builder
-                .push(" OFFSET ")
-                .push_bind(offset);
+            builder.push(" OFFSET ").push_bind(offset);
         }
 
-        builder
-            .build_query_as::<User>()
-            .fetch_all(&self.pool)
-            .await
+        builder.build_query_as::<User>().fetch_all(&self.pool).await
     }
 
-    pub async fn create(
-        &self,
-        email: &str,
-        username: &str,
-        password: &str,
-    ) -> sqlx::Result<i64> {
+    pub async fn create(&self, email: &str, username: &str, password: &str) -> sqlx::Result<i64> {
         let password_hash = bcrypt::hash(password, bcrypt::DEFAULT_COST)
             .map_err(|err| sqlx::Error::Protocol(err.to_string()))?;
 
@@ -182,13 +158,13 @@ impl Users {
             )
             VALUES ($1, $2, $3)
             RETURNING id
-            "#
+            "#,
         )
-            .bind(email)
-            .bind(username)
-            .bind(password_hash)
-            .fetch_one(&self.pool)
-            .await
+        .bind(email)
+        .bind(username)
+        .bind(password_hash)
+        .fetch_one(&self.pool)
+        .await
     }
 
     pub async fn update(&self, user: &User) -> sqlx::Result<()> {
@@ -203,26 +179,24 @@ impl Users {
                 trusted_user = $6,
                 admin = $7
             WHERE id = $8
-            "#
+            "#,
         )
-            .bind(&user.email)
-            .bind(&user.username)
-            .bind(&user.display_name)
-            .bind(&user.bio)
-            .bind(&user.password_hash)
-            .bind(user.trusted_user)
-            .bind(user.admin)
-            .bind(user.id)
-            .execute(&self.pool)
-            .await?;
+        .bind(&user.email)
+        .bind(&user.username)
+        .bind(&user.display_name)
+        .bind(&user.bio)
+        .bind(&user.password_hash)
+        .bind(user.trusted_user)
+        .bind(user.admin)
+        .bind(user.id)
+        .execute(&self.pool)
+        .await?;
 
         Ok(())
     }
 
     pub async fn delete(&self, id: i64) -> sqlx::Result<()> {
-        sqlx::query(
-            "DELETE FROM users WHERE id = $1"
-        )
+        sqlx::query("DELETE FROM users WHERE id = $1")
             .bind(id)
             .execute(&self.pool)
             .await?;
@@ -230,11 +204,7 @@ impl Users {
         Ok(())
     }
 
-    pub async fn check_password(
-        &self,
-        email: &str,
-        password: &str,
-    ) -> sqlx::Result<Option<User>> {
+    pub async fn check_password(&self, email: &str, password: &str) -> sqlx::Result<Option<User>> {
         let Some(mut user) = self.get_by_email(email, true).await? else {
             return Ok(None);
         };

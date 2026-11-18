@@ -1,7 +1,6 @@
-
+use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
-use axum::Json;
 use axum::response::{IntoResponse, Response};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
@@ -11,8 +10,8 @@ use crate::db::resource::model_bus::model_bus::{ModelBusQuery, ModelBuses};
 use crate::db::resource::model_bus::model_bus_def::{ModelBus, ModelBusFilledOut};
 use crate::extractors::authenticator::AuthUser;
 use crate::extractors::optional_authenticator::OptionalAuthUser;
-use crate::http::errors::ApiError;
 use crate::http::HttpState;
+use crate::http::errors::ApiError;
 
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
 pub struct ModelBusCreateRequest {
@@ -210,9 +209,7 @@ pub async fn get_model_bus(
         .get(id)
         .await
         .map_err(|err| ApiError::Database(err.to_string()))?
-        .ok_or_else(|| {
-            ApiError::NotFound("Model bus not found".to_string())
-        })?;
+        .ok_or_else(|| ApiError::NotFound("Model bus not found".to_string()))?;
 
     let filled_out = ModelBuses::fill_out(state.db.clone(), vec![model_bus], None)
         .await
@@ -299,11 +296,7 @@ pub async fn create_model_bus(
         .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
-    Ok((
-        StatusCode::CREATED,
-        Json(ModelBusCreateResponse { id }),
-    )
-        .into_response())
+    Ok((StatusCode::CREATED, Json(ModelBusCreateResponse { id })).into_response())
 }
 
 #[utoipa::path(
@@ -355,9 +348,7 @@ pub async fn update_model_bus(
         .get(id)
         .await
         .map_err(|err| ApiError::Database(err.to_string()))?
-        .ok_or_else(|| {
-            ApiError::NotFound("Model bus not found".to_string())
-        })?;
+        .ok_or_else(|| ApiError::NotFound("Model bus not found".to_string()))?;
 
     if let Some(product_code) = body.product_code {
         model_bus.product_code = product_code;
@@ -490,9 +481,7 @@ pub async fn delete_model_bus(
         .get(id)
         .await
         .map_err(|err| ApiError::Database(err.to_string()))?
-        .ok_or_else(|| {
-            ApiError::NotFound("Model bus not found".to_string())
-        })?;
+        .ok_or_else(|| ApiError::NotFound("Model bus not found".to_string()))?;
 
     state
         .db

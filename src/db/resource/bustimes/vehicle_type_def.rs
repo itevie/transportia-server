@@ -11,5 +11,5 @@ pub struct BtVehicleType {
     pub fuel: String,
     pub double_decker: bool,
     pub coach: bool,
-    pub electric: bool
+    pub electric: bool,
 }

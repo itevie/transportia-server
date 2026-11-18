@@ -1,14 +1,14 @@
-use axum::extract::{Path, State};
-use axum::http::StatusCode;
-use axum::Json;
-use axum::response::{IntoResponse, Response};
-use serde::Deserialize;
-use utoipa::ToSchema;
 use crate::auth::quick::check_route_checklist;
 use crate::db::resource::checklist::checklist_def::RouteChecklist;
 use crate::extractors::authenticator::AuthUser;
-use crate::http::errors::ApiError;
 use crate::http::HttpState;
+use crate::http::errors::ApiError;
+use axum::Json;
+use axum::extract::{Path, State};
+use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
+use serde::Deserialize;
+use utoipa::ToSchema;
 
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct RouteChecklistCreate {

@@ -46,10 +46,7 @@ impl Photos {
             order_by: None,
         }
     }
-    pub async fn search(
-        &self,
-        query: &PhotoQuery,
-    ) -> Result<Vec<Photo>, sqlx::Error> {
+    pub async fn search(&self, query: &PhotoQuery) -> Result<Vec<Photo>, sqlx::Error> {
         match query.photo_type {
             Some(PhotoType::Bus) => self.search_buses(query).await,
             Some(PhotoType::ModelBus) => self.search_model_buses(query).await,
@@ -68,10 +65,7 @@ impl Photos {
         )
     }
 
-    fn add_common_filters(
-        builder: &mut QueryBuilder<Postgres>,
-        query: &PhotoQuery,
-    ) {
+    fn add_common_filters(builder: &mut QueryBuilder<Postgres>, query: &PhotoQuery) {
         builder.push(" WHERE 1 = 1");
 
         if let Some(value) = query.id {
@@ -177,14 +171,10 @@ impl Photos {
             }
         }
 
-        builder
-            .push(" LIMIT ")
-            .push_bind(page_length);
+        builder.push(" LIMIT ").push_bind(page_length);
 
         if let Some(offset) = query.offset {
-            builder
-                .push(" OFFSET ")
-                .push_bind(offset);
+            builder.push(" OFFSET ").push_bind(offset);
         }
 
         builder
@@ -193,10 +183,7 @@ impl Photos {
             .await
     }
 
-    async fn search_buses(
-        &self,
-        query: &PhotoQuery,
-    ) -> Result<Vec<Photo>, sqlx::Error> {
+    async fn search_buses(&self, query: &PhotoQuery) -> Result<Vec<Photo>, sqlx::Error> {
         let mut builder = Self::photo_select();
 
         builder.push(
@@ -230,10 +217,7 @@ impl Photos {
         self.finish_search(builder, query).await
     }
 
-    fn add_bus_filters(
-        builder: &mut QueryBuilder<Postgres>,
-        query: &PhotoQuery,
-    ) {
+    fn add_bus_filters(builder: &mut QueryBuilder<Postgres>, query: &PhotoQuery) {
         if let Some(value) = &query.bd_reg {
             let search = format!("%{}%", value);
 
@@ -287,9 +271,7 @@ impl Photos {
         }
 
         if let Some(value) = &query.bd_route {
-            builder
-                .push(" AND bd.route_id = ")
-                .push_bind(value.clone());
+            builder.push(" AND bd.route_id = ").push_bind(value.clone());
         }
 
         if let Some(value) = query.bd_has_matched_vehicle {
@@ -301,10 +283,7 @@ impl Photos {
         }
     }
 
-    async fn search_trams(
-        &self,
-        query: &PhotoQuery,
-    ) -> Result<Vec<Photo>, sqlx::Error> {
+    async fn search_trams(&self, query: &PhotoQuery) -> Result<Vec<Photo>, sqlx::Error> {
         let mut builder = Self::photo_select();
 
         builder.push(
@@ -336,10 +315,7 @@ impl Photos {
         self.finish_search(builder, query).await
     }
 
-    fn add_tram_filters(
-        builder: &mut QueryBuilder<Postgres>,
-        query: &PhotoQuery,
-    ) {
+    fn add_tram_filters(builder: &mut QueryBuilder<Postgres>, query: &PhotoQuery) {
         if let Some(value) = &query.td_fleet {
             let search = format!("%{}%", value);
 
@@ -393,10 +369,7 @@ impl Photos {
         }
     }
 
-    async fn search_model_buses(
-        &self,
-        query: &PhotoQuery,
-    ) -> Result<Vec<Photo>, sqlx::Error> {
+    async fn search_model_buses(&self, query: &PhotoQuery) -> Result<Vec<Photo>, sqlx::Error> {
         let mut builder = Self::photo_select();
 
         builder.push(
@@ -438,10 +411,7 @@ impl Photos {
         self.finish_search(builder, query).await
     }
 
-    fn add_model_bus_filters(
-        builder: &mut QueryBuilder<Postgres>,
-        query: &PhotoQuery,
-    ) {
+    fn add_model_bus_filters(builder: &mut QueryBuilder<Postgres>, query: &PhotoQuery) {
         if let Some(value) = &query.mbd_manufacturer {
             builder
                 .push(" AND mb.manufacturer ILIKE ")
@@ -455,9 +425,7 @@ impl Photos {
         }
 
         if let Some(value) = query.mbd_scale {
-            builder
-                .push(" AND mb.scale = ")
-                .push_bind(value);
+            builder.push(" AND mb.scale = ").push_bind(value);
         }
 
         if let Some(value) = &query.mbd_operator {
@@ -503,15 +471,11 @@ impl Photos {
         }
 
         if let Some(value) = query.mbd_has_certificate {
-            builder
-                .push(" AND mb.has_certificate = ")
-                .push_bind(value);
+            builder.push(" AND mb.has_certificate = ").push_bind(value);
         }
 
         if let Some(value) = query.mbd_released {
-            builder
-                .push(" AND mb.released = ")
-                .push_bind(value);
+            builder.push(" AND mb.released = ").push_bind(value);
         }
 
         if let Some(value) = query.mbd_model_id {
@@ -529,16 +493,11 @@ impl Photos {
         }
 
         if let Some(value) = query.mbd_owner_id {
-            builder
-                .push(" AND mbo.user_id = ")
-                .push_bind(value);
+            builder.push(" AND mbo.user_id = ").push_bind(value);
         }
     }
 
-    async fn search_photos(
-        &self,
-        query: &PhotoQuery,
-    ) -> Result<Vec<Photo>, sqlx::Error> {
+    async fn search_photos(&self, query: &PhotoQuery) -> Result<Vec<Photo>, sqlx::Error> {
         let mut builder = Self::photo_select();
 
         Self::add_common_filters(&mut builder, query);
@@ -546,20 +505,13 @@ impl Photos {
         Self::add_general_search(
             &mut builder,
             query,
-            &[
-                "p.title",
-                "p.description",
-                "p.file_name",
-            ],
+            &["p.title", "p.description", "p.file_name"],
         );
 
         self.finish_search(builder, query).await
     }
 
-    async fn search_all(
-        &self,
-        query: &PhotoQuery,
-    ) -> Result<Vec<Photo>, sqlx::Error> {
+    async fn search_all(&self, query: &PhotoQuery) -> Result<Vec<Photo>, sqlx::Error> {
         let mut builder = Self::photo_select();
 
         builder.push(
@@ -599,17 +551,14 @@ impl Photos {
                 "p.title",
                 "p.description",
                 "p.file_name",
-
                 // Bus
                 "bd.reg",
                 "bd.fleet",
                 "v.reg",
                 "v.fleet",
-
                 // Tram
                 "td.fleet",
                 "t.fleet",
-
                 // Model bus
                 "mb.manufacturer",
                 "mb.product_code",

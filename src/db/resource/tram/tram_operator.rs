@@ -1,5 +1,5 @@
-use sqlx::PgPool;
 use crate::db::resource::tram::tram_operator_def::TramOperator;
+use sqlx::PgPool;
 
 pub static SQL_TRAM_OPERATOR: &str = r#"
 CREATE TABLE IF NOT EXISTS tram_operators (
@@ -28,9 +28,9 @@ impl TramOperators {
             WHERE id = $1
             "#,
         )
-            .bind(id)
-            .fetch_optional(&self.pool)
-            .await
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
     }
 
     pub async fn search(&self, query: &str) -> sqlx::Result<Vec<TramOperator>> {
@@ -47,9 +47,9 @@ impl TramOperators {
             LIMIT 50
             "#,
         )
-            .bind(search)
-            .fetch_all(&self.pool)
-            .await
+        .bind(search)
+        .fetch_all(&self.pool)
+        .await
     }
 
     pub async fn create(&self, operator: &TramOperator) -> sqlx::Result<i64> {
@@ -64,11 +64,11 @@ impl TramOperators {
             RETURNING id
             "#,
         )
-            .bind(&operator.name)
-            .bind(&operator.location)
-            .bind(&operator.website)
-            .fetch_one(&self.pool)
-            .await
+        .bind(&operator.name)
+        .bind(&operator.location)
+        .bind(&operator.website)
+        .fetch_one(&self.pool)
+        .await
     }
 
     pub async fn update(&self, operator: &TramOperator) -> sqlx::Result<()> {
@@ -82,12 +82,12 @@ impl TramOperators {
             WHERE id = $4
             "#,
         )
-            .bind(&operator.name)
-            .bind(&operator.location)
-            .bind(&operator.website)
-            .bind(operator.id)
-            .execute(&self.pool)
-            .await?;
+        .bind(&operator.name)
+        .bind(&operator.location)
+        .bind(&operator.website)
+        .bind(operator.id)
+        .execute(&self.pool)
+        .await?;
 
         if updated.rows_affected() == 0 {
             return Err(sqlx::Error::RowNotFound);

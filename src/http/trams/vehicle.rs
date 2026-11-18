@@ -1,7 +1,6 @@
-
+use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
-use axum::Json;
 use axum::response::{IntoResponse, Response};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
@@ -11,8 +10,8 @@ use crate::db::resource::tram::tram::{TramQuery, Trams};
 use crate::db::resource::tram::tram_def::{Tram, TramFilledOut};
 use crate::extractors::authenticator::AuthUser;
 use crate::extractors::optional_authenticator::OptionalAuthUser;
-use crate::http::errors::ApiError;
 use crate::http::HttpState;
+use crate::http::errors::ApiError;
 
 #[derive(Debug, Deserialize, Serialize, ToSchema, IntoParams)]
 pub struct TramSearchQuery {
@@ -28,7 +27,7 @@ pub struct TramCreateRequest {
     pub name: Option<String>,
     pub branding: Option<String>,
     pub garage: Option<String>,
-    pub withdrawn: bool
+    pub withdrawn: bool,
 }
 
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
@@ -40,12 +39,12 @@ pub struct TramUpdateRequest {
     pub name: Option<String>,
     pub branding: Option<String>,
     pub garage: Option<String>,
-    pub withdrawn: Option<bool>
+    pub withdrawn: Option<bool>,
 }
 
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
 pub struct TramCreateResponse {
-    pub id: i64
+    pub id: i64,
 }
 
 #[utoipa::path(
@@ -184,11 +183,7 @@ pub async fn create_tram(
         .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
-    Ok((
-        StatusCode::CREATED,
-        Json(TramCreateResponse { id }),
-    )
-        .into_response())
+    Ok((StatusCode::CREATED, Json(TramCreateResponse { id })).into_response())
 }
 
 #[utoipa::path(

@@ -1,13 +1,13 @@
-use axum::extract::{Path, Query, State};
-use axum::http::StatusCode;
-use axum::Json;
-use axum::response::{IntoResponse, Response};
 use crate::db;
 use crate::db::resource::photo::photo::{PhotoQuery, Photos};
 use crate::db::resource::photo::photo_def::PhotoFilledOut;
 use crate::extractors::optional_authenticator::OptionalAuthUser;
-use crate::http::errors::ApiError;
 use crate::http::HttpState;
+use crate::http::errors::ApiError;
+use axum::Json;
+use axum::extract::{Path, Query, State};
+use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
 
 #[utoipa::path(
     get,
@@ -86,7 +86,7 @@ pub async fn get_photo(
         .await
         .map_err(|err| ApiError::Database(err.to_string()))?
         .ok_or(ApiError::UserNotFound)?;
-    
+
     let filled_out = Photos::fill_out(state.db.clone(), vec![photo], user.map(|x| x.user_id))
         .await
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?;

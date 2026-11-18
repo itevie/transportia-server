@@ -1,12 +1,12 @@
-use axum::extract::{Path, Query, State};
-use axum::http::{Response, StatusCode};
-use axum::Json;
-use serde::Deserialize;
-use utoipa::{IntoParams, ToSchema};
 use crate::db::resource::favourite::favourite_def::FavouriteType;
 use crate::extractors::authenticator::AuthUser;
-use crate::http::errors::ApiError;
 use crate::http::HttpState;
+use crate::http::errors::ApiError;
+use axum::Json;
+use axum::extract::{Path, Query, State};
+use axum::http::{Response, StatusCode};
+use serde::Deserialize;
+use utoipa::{IntoParams, ToSchema};
 
 #[derive(Debug, Deserialize, ToSchema, IntoParams)]
 pub struct FavouriteQuery {
@@ -42,11 +42,7 @@ pub async fn create_favourite(
     state
         .db
         .favourites
-        .create(
-            user_id,
-            query.target_id,
-            query.target_type,
-        )
+        .create(user_id, query.target_id, query.target_type)
         .await
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 
@@ -81,11 +77,7 @@ pub async fn delete_favourite(
     state
         .db
         .favourites
-        .delete(
-            user_id,
-            query.target_id,
-            query.target_type,
-        )
+        .delete(user_id, query.target_id, query.target_type)
         .await
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 
@@ -135,12 +127,7 @@ pub async fn update_favourite_group(
     let updated = state
         .db
         .favourites
-        .update_group_id(
-            user_id,
-            target_id,
-            target_type,
-            request.group_id,
-        )
+        .update_group_id(user_id, target_id, target_type, request.group_id)
         .await
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 

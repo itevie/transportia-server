@@ -1,20 +1,20 @@
-use aws_smithy_types::byte_stream::ByteStream;
-use axum::{extract::Multipart, Json};
-use axum::extract::{Query, State};
-use axum::http::StatusCode;
-use axum::response::{IntoResponse, Response};
-use serde::Deserialize;
-use utoipa::{IntoParams, ToSchema};
 use crate::db::resource::photo::photo::Photos;
 use crate::db::resource::photo::photo_def::{Photo, PhotoFilledOut, PhotoType};
 use crate::extractors::authenticator::AuthUser;
-use crate::http::errors::ApiError;
 use crate::http::HttpState;
+use crate::http::errors::ApiError;
 use crate::util::image::compress_image;
+use aws_smithy_types::byte_stream::ByteStream;
+use axum::extract::{Query, State};
+use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
+use axum::{Json, extract::Multipart};
+use serde::Deserialize;
+use utoipa::{IntoParams, ToSchema};
 
 #[derive(Debug, Deserialize, ToSchema, IntoParams)]
 pub struct UploadDetails {
-    pub photo_type: PhotoType
+    pub photo_type: PhotoType,
 }
 
 #[utoipa::path(
@@ -54,7 +54,7 @@ pub async fn upload_image(
     mut multipart: Multipart,
 ) -> Result<Response, ApiError> {
     let mut photos: Vec<Photo> = vec![];
-    
+
     while let Some(field) = multipart
         .next_field()
         .await
@@ -75,24 +75,18 @@ pub async fn upload_image(
             .await
             .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 
-        let data = compress_image(&data)
-            .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
+        let data =
+            compress_image(&data).map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 
-        tokio::fs::write(
-            format!("/tmp/{file_name}"),
-            &data,
-        )
+        tokio::fs::write(format!("/tmp/{file_name}"), &data)
             .await
             .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 
-        let key = format!(
-            "photos/{}/{}",
-            user_id,
-            uuid::Uuid::new_v4()
-        );
+        let key = format!("photos/{}/{}", user_id, uuid::Uuid::new_v4());
 
         // Upload to R2
-        state.s3
+        state
+            .s3
             .put_object()
             .bucket(std::env::var("R2_BUCKET").unwrap())
             .key(&key)
@@ -100,22 +94,25 @@ pub async fn upload_image(
             .content_type("image/webp")
             .send()
             .await
-            .map_err(|err| {
-                ApiError::GenericServerError(err.to_string())
-            })?;
+            .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 
-        let photo = state.db.photos.create(&Photo {
-            id: 0,
-            author_id: user_id,
-            photo_type: details.photo_type,
-            obj_details_id: None,
-            comment_thread: None,
-            file_name,
-            uploaded_id: key,
-            title: "".to_string(),
-            description: None,
-            created_at: chrono::Utc::now().to_rfc3339(),
-        }).await.map_err(|err| ApiError::GenericServerError(err.to_string()))?;
+        let photo = state
+            .db
+            .photos
+            .create(&Photo {
+                id: 0,
+                author_id: user_id,
+                photo_type: details.photo_type,
+                obj_details_id: None,
+                comment_thread: None,
+                file_name,
+                uploaded_id: key,
+                title: "".to_string(),
+                description: None,
+                created_at: chrono::Utc::now().to_rfc3339(),
+            })
+            .await
+            .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 
         photos.push(photo);
     }

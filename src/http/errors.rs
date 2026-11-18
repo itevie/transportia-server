@@ -20,9 +20,7 @@ pub enum ApiError {
 impl From<sqlx::Error> for ApiError {
     fn from(error: sqlx::Error) -> Self {
         match error {
-            sqlx::Error::RowNotFound => {
-                Self::NotFound("Database record not found".into())
-            }
+            sqlx::Error::RowNotFound => Self::NotFound("Database record not found".into()),
             error => Self::Database(error.to_string()),
         }
     }

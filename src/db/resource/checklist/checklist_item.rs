@@ -1,4 +1,3 @@
-
 use std::sync::Arc;
 
 use sqlx::PgPool;
@@ -6,7 +5,9 @@ use sqlx::PgPool;
 use crate::db::Database;
 use crate::db::resource::bustimes::vehicle::BtVehicles;
 use crate::db::resource::checklist::checklist_def::{Checklist, ChecklistType};
-use crate::db::resource::checklist::checklist_item_def::{ChecklistItem, ChecklistItemFilledOut, ChecklistObj};
+use crate::db::resource::checklist::checklist_item_def::{
+    ChecklistItem, ChecklistItemFilledOut, ChecklistObj,
+};
 
 pub static SQL_CHECKLIST_ITEMS: &str = r#"
 CREATE TABLE IF NOT EXISTS checklist_items (
@@ -38,9 +39,9 @@ impl ChecklistItems {
             WHERE id = $1
             "#,
         )
-            .bind(id)
-            .fetch_optional(&self.pool)
-            .await
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
     }
 
     pub async fn get_by_checklist(
@@ -55,9 +56,9 @@ impl ChecklistItems {
             ORDER BY added_at ASC
             "#,
         )
-            .bind(checklist_id)
-            .fetch_all(&self.pool)
-            .await
+        .bind(checklist_id)
+        .fetch_all(&self.pool)
+        .await
     }
 
     pub async fn get_by_obj(
@@ -73,10 +74,10 @@ impl ChecklistItems {
               AND obj_id = $2
             "#,
         )
-            .bind(checklist_id)
-            .bind(obj_id)
-            .fetch_optional(&self.pool)
-            .await
+        .bind(checklist_id)
+        .bind(obj_id)
+        .fetch_optional(&self.pool)
+        .await
     }
 
     pub async fn create(
@@ -97,11 +98,11 @@ impl ChecklistItems {
         RETURNING id
         "#,
         )
-            .bind(checklist_id)
-            .bind(obj_id)
-            .bind(added_at)
-            .fetch_optional(&self.pool)
-            .await
+        .bind(checklist_id)
+        .bind(obj_id)
+        .bind(added_at)
+        .fetch_optional(&self.pool)
+        .await
     }
 
     pub async fn update(&self, item: &ChecklistItem) -> Result<(), sqlx::Error> {
@@ -116,13 +117,13 @@ impl ChecklistItems {
             WHERE id = $5
             "#,
         )
-            .bind(item.checklist_id)
-            .bind(&item.obj_id)
-            .bind(&item.added_at)
-            .bind(&item.completed_at)
-            .bind(item.id)
-            .execute(&self.pool)
-            .await?;
+        .bind(item.checklist_id)
+        .bind(&item.obj_id)
+        .bind(&item.added_at)
+        .bind(&item.completed_at)
+        .bind(item.id)
+        .execute(&self.pool)
+        .await?;
 
         Ok(())
     }
@@ -139,10 +140,10 @@ impl ChecklistItems {
             WHERE id = $2
             "#,
         )
-            .bind(completed_at)
-            .bind(id)
-            .execute(&self.pool)
-            .await?;
+        .bind(completed_at)
+        .bind(id)
+        .execute(&self.pool)
+        .await?;
 
         Ok(())
     }
@@ -165,20 +166,28 @@ impl ChecklistItems {
 
         for item in items {
             let obj = match checklist.checklist_type {
-                ChecklistType::Service => {
-                    db.tx_lines.get_by_line_id(&item.obj_id).await?.map(|x| ChecklistObj::Service(x))
-                }
+                ChecklistType::Service => db
+                    .tx_lines
+                    .get_by_line_id(&item.obj_id)
+                    .await?
+                    .map(|x| ChecklistObj::Service(x)),
                 ChecklistType::Vehicle => {
-                    match db.vehicles.get(item.obj_id.parse::<i64>().map_err(|e| sqlx::Error::Decode(Box::new(e)))?).await? {
-                        Some(vehicle) => {
-                            Some(
-                                ChecklistObj::Vehicle(BtVehicles::fill_out(db.clone(), vec![vehicle], None).await?
-                                    .into_iter()
-                                    .next()
-                                    .unwrap()
-                                )
-                            )
-                        },
+                    match db
+                        .vehicles
+                        .get(
+                            item.obj_id
+                                .parse::<i64>()
+                                .map_err(|e| sqlx::Error::Decode(Box::new(e)))?,
+                        )
+                        .await?
+                    {
+                        Some(vehicle) => Some(ChecklistObj::Vehicle(
+                            BtVehicles::fill_out(db.clone(), vec![vehicle], None)
+                                .await?
+                                .into_iter()
+                                .next()
+                                .unwrap(),
+                        )),
                         None => None,
                     }
                 }

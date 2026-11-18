@@ -1,15 +1,15 @@
 use crate::auth::quick::check_route_checklist;
+use crate::db::resource::checklist::checklist_def::ChecklistType;
 use crate::extractors::authenticator::AuthUser;
 use crate::http::HttpState;
 use crate::http::errors::ApiError;
+use crate::validation::checklists::check_checklist_obj;
 use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
-use crate::db::resource::checklist::checklist_def::ChecklistType;
-use crate::validation::checklists::check_checklist_obj;
 
 #[utoipa::path(
     post,
@@ -119,30 +119,28 @@ pub async fn create_route_checklist_item_from_operators(
     let checklist = check_route_checklist(state.db.clone(), checklist_id, user_id).await?;
 
     let ids = match checklist.checklist_type {
-        ChecklistType::Service => {
-            state
-                .db
-                .tx_lines
-                .get_by_national_operator_code(operator_id.as_str())
-                .await
-                .map_err(|_e| {
-                    ApiError::GenericServerError("Failed to fetch lines by operator".to_string())
-                })?
-                .iter().map(|x| x.tx_id.clone())
-                .collect::<Vec<_>>()
-        }
-        ChecklistType::Vehicle => {
-            state
-                .db
-                .vehicles
-                .get_by_national_operator_code(operator_id.as_str())
-                .await
-                .map_err(|_e| {
-                    ApiError::GenericServerError("Failed to fetch vehicles for operator".to_string())
-                })?
-                .iter().map(|x| x.id.to_string())
-                .collect::<Vec<_>>()
-        }
+        ChecklistType::Service => state
+            .db
+            .tx_lines
+            .get_by_national_operator_code(operator_id.as_str())
+            .await
+            .map_err(|_e| {
+                ApiError::GenericServerError("Failed to fetch lines by operator".to_string())
+            })?
+            .iter()
+            .map(|x| x.tx_id.clone())
+            .collect::<Vec<_>>(),
+        ChecklistType::Vehicle => state
+            .db
+            .vehicles
+            .get_by_national_operator_code(operator_id.as_str())
+            .await
+            .map_err(|_e| {
+                ApiError::GenericServerError("Failed to fetch vehicles for operator".to_string())
+            })?
+            .iter()
+            .map(|x| x.id.to_string())
+            .collect::<Vec<_>>(),
     };
 
     let added_at = chrono::Utc::now().to_rfc3339();
@@ -214,30 +212,30 @@ pub async fn create_route_checklist_items_from_operators_bulk(
 
     for operator_id in operator_ids {
         let ids = match checklist.checklist_type {
-            ChecklistType::Service => {
-                state
-                    .db
-                    .tx_lines
-                    .get_by_national_operator_code(operator_id.as_str())
-                    .await
-                    .map_err(|_e| {
-                        ApiError::GenericServerError("Failed to fetch lines by operator".to_string())
-                    })?
-                    .iter().map(|x| x.tx_id.clone())
-                    .collect::<Vec<_>>()
-            }
-            ChecklistType::Vehicle => {
-                state
-                    .db
-                    .vehicles
-                    .get_by_national_operator_code(operator_id.as_str())
-                    .await
-                    .map_err(|_e| {
-                        ApiError::GenericServerError("Failed to fetch vehicles for operator".to_string())
-                    })?
-                    .iter().map(|x| x.id.to_string())
-                    .collect::<Vec<_>>()
-            }
+            ChecklistType::Service => state
+                .db
+                .tx_lines
+                .get_by_national_operator_code(operator_id.as_str())
+                .await
+                .map_err(|_e| {
+                    ApiError::GenericServerError("Failed to fetch lines by operator".to_string())
+                })?
+                .iter()
+                .map(|x| x.tx_id.clone())
+                .collect::<Vec<_>>(),
+            ChecklistType::Vehicle => state
+                .db
+                .vehicles
+                .get_by_national_operator_code(operator_id.as_str())
+                .await
+                .map_err(|_e| {
+                    ApiError::GenericServerError(
+                        "Failed to fetch vehicles for operator".to_string(),
+                    )
+                })?
+                .iter()
+                .map(|x| x.id.to_string())
+                .collect::<Vec<_>>(),
         };
 
         for id in ids {
@@ -293,30 +291,30 @@ pub async fn count_lines_from_operators_bulk(
 
     for operator_id in json.operators {
         let ids = match json.checklist_type {
-            ChecklistType::Service => {
-                state
-                    .db
-                    .tx_lines
-                    .get_by_national_operator_code(operator_id.as_str())
-                    .await
-                    .map_err(|_e| {
-                        ApiError::GenericServerError("Failed to fetch lines by operator".to_string())
-                    })?
-                    .iter().map(|x| x.tx_id.clone())
-                    .collect::<Vec<_>>()
-            }
-            ChecklistType::Vehicle => {
-                state
-                    .db
-                    .vehicles
-                    .get_by_national_operator_code(operator_id.as_str())
-                    .await
-                    .map_err(|_e| {
-                        ApiError::GenericServerError("Failed to fetch vehicles for operator".to_string())
-                    })?
-                    .iter().map(|x| x.id.to_string())
-                    .collect::<Vec<_>>()
-            }
+            ChecklistType::Service => state
+                .db
+                .tx_lines
+                .get_by_national_operator_code(operator_id.as_str())
+                .await
+                .map_err(|_e| {
+                    ApiError::GenericServerError("Failed to fetch lines by operator".to_string())
+                })?
+                .iter()
+                .map(|x| x.tx_id.clone())
+                .collect::<Vec<_>>(),
+            ChecklistType::Vehicle => state
+                .db
+                .vehicles
+                .get_by_national_operator_code(operator_id.as_str())
+                .await
+                .map_err(|_e| {
+                    ApiError::GenericServerError(
+                        "Failed to fetch vehicles for operator".to_string(),
+                    )
+                })?
+                .iter()
+                .map(|x| x.id.to_string())
+                .collect::<Vec<_>>(),
         };
 
         count += ids.len();

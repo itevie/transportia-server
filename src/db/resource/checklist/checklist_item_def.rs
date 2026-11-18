@@ -1,8 +1,8 @@
+use crate::db::resource::bustimes::vehicle_def::BtVehicleFilleOut;
 use crate::db::resource::transxchange::line_def::TxLine;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use utoipa::ToSchema;
-use crate::db::resource::bustimes::vehicle_def::BtVehicleFilleOut;
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, FromRow)]
 pub struct ChecklistItem {
@@ -31,5 +31,5 @@ pub struct ChecklistItemFilledOut {
 #[serde(tag = "type")]
 pub enum ChecklistObj {
     Service(TxLine),
-    Vehicle(BtVehicleFilleOut)
+    Vehicle(BtVehicleFilleOut),
 }

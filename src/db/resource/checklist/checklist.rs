@@ -1,9 +1,6 @@
-
 use sqlx::PgPool;
 
-use crate::db::resource::checklist::checklist_def::{
-    Checklist, ChecklistFilledOut,
-};
+use crate::db::resource::checklist::checklist_def::{Checklist, ChecklistFilledOut};
 
 pub static SQL_CHECKLISTS: &str = r#"
 CREATE TABLE IF NOT EXISTS checklists (
@@ -35,9 +32,9 @@ impl Checklists {
             WHERE id = $1
             "#,
         )
-            .bind(id)
-            .fetch_optional(&self.pool)
-            .await
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
     }
 
     pub async fn count_items(&self, checklist_id: i64) -> Result<i64, sqlx::Error> {
@@ -48,9 +45,9 @@ impl Checklists {
             WHERE checklist_id = $1
             "#,
         )
-            .bind(checklist_id)
-            .fetch_one(&self.pool)
-            .await
+        .bind(checklist_id)
+        .fetch_one(&self.pool)
+        .await
     }
 
     pub async fn count_completed_items(&self, checklist_id: i64) -> Result<i64, sqlx::Error> {
@@ -62,9 +59,9 @@ impl Checklists {
               AND completed_at IS NOT NULL
             "#,
         )
-            .bind(checklist_id)
-            .fetch_one(&self.pool)
-            .await
+        .bind(checklist_id)
+        .fetch_one(&self.pool)
+        .await
     }
 
     pub async fn get_all(&self, owner_id: i64) -> Result<Vec<Checklist>, sqlx::Error> {
@@ -76,9 +73,9 @@ impl Checklists {
             ORDER BY id
             "#,
         )
-            .bind(owner_id)
-            .fetch_all(&self.pool)
-            .await
+        .bind(owner_id)
+        .fetch_all(&self.pool)
+        .await
     }
 
     pub async fn get_by_owner(&self, owner_id: i64) -> Result<Vec<Checklist>, sqlx::Error> {
@@ -90,9 +87,9 @@ impl Checklists {
             ORDER BY created_at DESC
             "#,
         )
-            .bind(owner_id)
-            .fetch_all(&self.pool)
-            .await
+        .bind(owner_id)
+        .fetch_all(&self.pool)
+        .await
     }
 
     pub async fn create(
@@ -118,14 +115,14 @@ impl Checklists {
             RETURNING id
             "#,
         )
-            .bind(title)
-            .bind(description)
-            .bind(owner_id)
-            .bind(checklist_type)
-            .bind(auto_check_photos)
-            .bind(created_at)
-            .fetch_one(&self.pool)
-            .await
+        .bind(title)
+        .bind(description)
+        .bind(owner_id)
+        .bind(checklist_type)
+        .bind(auto_check_photos)
+        .bind(created_at)
+        .fetch_one(&self.pool)
+        .await
     }
 
     pub async fn update(&self, checklist: &Checklist) -> Result<(), sqlx::Error> {
@@ -140,13 +137,13 @@ impl Checklists {
             WHERE id = $5
             "#,
         )
-            .bind(&checklist.title)
-            .bind(&checklist.description)
-            .bind(checklist.checklist_type)
-            .bind(checklist.auto_check_photos)
-            .bind(checklist.id)
-            .execute(&self.pool)
-            .await?;
+        .bind(&checklist.title)
+        .bind(&checklist.description)
+        .bind(checklist.checklist_type)
+        .bind(checklist.auto_check_photos)
+        .bind(checklist.id)
+        .execute(&self.pool)
+        .await?;
 
         Ok(())
     }
@@ -169,10 +166,7 @@ impl Checklists {
         for checklist in checklists {
             let count = db.checklists.count_items(checklist.id).await?;
 
-            let completed_count = db
-                .checklists
-                .count_completed_items(checklist.id)
-                .await?;
+            let completed_count = db.checklists.count_completed_items(checklist.id).await?;
 
             filled_out.push(ChecklistFilledOut {
                 id: checklist.id,

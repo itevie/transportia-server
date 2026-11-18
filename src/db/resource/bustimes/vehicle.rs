@@ -85,8 +85,6 @@ impl BtVehicles {
         .await
     }
 
-
-
     pub async fn get_by_national_operator_code(
         &self,
         national_code: &str,
@@ -99,9 +97,9 @@ impl BtVehicles {
             WHERE operator_id = $1
             "#,
         )
-            .bind(national_code)
-            .fetch_all(&self.pool)
-            .await
+        .bind(national_code)
+        .fetch_all(&self.pool)
+        .await
     }
 
     pub async fn search(&self, query: &BtVehicleQuery) -> sqlx::Result<Vec<BtVehicle>> {

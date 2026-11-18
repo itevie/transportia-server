@@ -1,5 +1,5 @@
 use crate::db::Database;
-use crate::db::resource::checklist::checklist_def::{Checklist};
+use crate::db::resource::checklist::checklist_def::Checklist;
 use crate::db::resource::favourite::favourite_group_def::FavouritesGroup;
 use crate::db::resource::photo::photo_def::Photo;
 use crate::http::errors::ApiError;

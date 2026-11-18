@@ -1,4 +1,3 @@
-
 use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
@@ -32,9 +31,7 @@ impl<'q> sqlx::Encode<'q, sqlx::Postgres> for ChecklistType {
 }
 
 impl<'r> sqlx::Decode<'r, sqlx::Postgres> for ChecklistType {
-    fn decode(
-        value: sqlx::postgres::PgValueRef<'r>,
-    ) -> Result<Self, sqlx::error::BoxDynError> {
+    fn decode(value: sqlx::postgres::PgValueRef<'r>) -> Result<Self, sqlx::error::BoxDynError> {
         let value = <i32 as sqlx::Decode<sqlx::Postgres>>::decode(value)?;
 
         match value {

@@ -1,8 +1,8 @@
 use crate::auth::quick::check_route_checklist;
-use crate::db::resource::checklist::checklist::{Checklists};
-use crate::db::resource::checklist::checklist_def::{Checklist};
-use crate::db::resource::checklist::checklist_item::{ChecklistItems};
-use crate::db::resource::checklist::checklist_item_def::{ChecklistItem};
+use crate::db::resource::checklist::checklist::Checklists;
+use crate::db::resource::checklist::checklist_def::Checklist;
+use crate::db::resource::checklist::checklist_item::ChecklistItems;
+use crate::db::resource::checklist::checklist_item_def::ChecklistItem;
 use crate::extractors::authenticator::AuthUser;
 use crate::http::HttpState;
 use crate::http::errors::ApiError;

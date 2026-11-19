@@ -28,11 +28,11 @@ pub enum FavouriteType {
 
 impl sqlx::Type<sqlx::Postgres> for FavouriteType {
     fn type_info() -> sqlx::postgres::PgTypeInfo {
-        <i64 as sqlx::Type<sqlx::Postgres>>::type_info()
+        <i32 as sqlx::Type<sqlx::Postgres>>::type_info()
     }
 
     fn compatible(ty: &sqlx::postgres::PgTypeInfo) -> bool {
-        <i64 as sqlx::Type<sqlx::Postgres>>::compatible(ty)
+        <i32 as sqlx::Type<sqlx::Postgres>>::compatible(ty)
     }
 }
 
@@ -41,7 +41,10 @@ impl<'q> sqlx::Encode<'q, sqlx::Postgres> for FavouriteType {
         &self,
         buf: &mut sqlx::postgres::PgArgumentBuffer,
     ) -> Result<sqlx::encode::IsNull, sqlx::error::BoxDynError> {
-        <i64 as sqlx::Encode<'q, sqlx::Postgres>>::encode_by_ref(&(*self as i64), buf)
+        <i32 as sqlx::Encode<'q, sqlx::Postgres>>::encode_by_ref(
+            &(*self as i32),
+            buf,
+        )
     }
 }
 
@@ -90,7 +93,7 @@ pub struct Favourite {
     pub target_id: String,
     pub target_type: FavouriteType,
     pub created_at: String,
-    pub group: Option<i64>,
+    pub group_id: Option<i64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, FromRow)]

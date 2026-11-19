@@ -2,7 +2,8 @@ pub mod big_search;
 mod bustimes;
 pub mod macros;
 pub mod resource;
-mod util;
+pub mod util;
+mod macro_pro_max;
 
 use std::sync::Arc;
 
@@ -29,21 +30,21 @@ use crate::db::resource::photo::model_bus_photo_details::{
 };
 use crate::db::resource::photo::photo::{Photos, SQL_PHOTOS};
 use crate::db::resource::photo::tram_photo_details::{
-    SQL_TRAM_PHOTO_DETAILS, TramPhotoDetailsManager,
+    TramPhotoDetailsManager, SQL_TRAM_PHOTO_DETAILS,
 };
 use crate::db::resource::star_rating::star_rating::{PhotoRatings, SQL_PHOTO_RATING};
-use crate::db::resource::tram::tram::{SQL_TRAM, Trams};
+use crate::db::resource::tram::tram::{Trams, SQL_TRAM};
 use crate::db::resource::tram::tram_announcement_audio::{
-    SQL_TRAM_ANNOUNCEMENT_AUDIO, TramAnnouncementAudios,
+    TramAnnouncementAudios, SQL_TRAM_ANNOUNCEMENT_AUDIO,
 };
-use crate::db::resource::tram::tram_livery::{SQL_TRAM_LIVERY, TramLiveries};
-use crate::db::resource::tram::tram_operator::{SQL_TRAM_OPERATOR, TramOperators};
+use crate::db::resource::tram::tram_livery::{TramLiveries, SQL_TRAM_LIVERY};
+use crate::db::resource::tram::tram_operator::{TramOperators, SQL_TRAM_OPERATOR};
 use crate::db::resource::tram::tram_route::SQL_TRAM_ROUTE;
 use crate::db::resource::tram::tram_stop::SQL_TRAM_STOP;
-use crate::db::resource::tram::tram_type::{SQL_TRAM_TYPE, TramTypes};
-use crate::db::resource::transxchange::line::{SQL_TX_LINE, TxLines};
-use crate::db::resource::transxchange::operator::{SQL_TX_OPERATOR, TxOperators};
-use crate::db::resource::user::{SQL_USER, Users};
+use crate::db::resource::tram::tram_type::{TramTypes, SQL_TRAM_TYPE};
+use crate::db::resource::transxchange::line::{TxLines, SQL_TX_LINE};
+use crate::db::resource::transxchange::operator::{TxOperators, SQL_TX_OPERATOR};
+use crate::db::resource::user::{Users, SQL_USER};
 use sqlx::PgPool;
 use sqlx::postgres::PgPoolOptions;
 

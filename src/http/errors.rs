@@ -1,3 +1,4 @@
+use std::backtrace::Backtrace;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 
@@ -28,6 +29,13 @@ impl From<sqlx::Error> for ApiError {
 
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
+        let backtrace = Backtrace::force_capture();
+
+        println!(
+            "{:#?}",
+            backtrace
+        );
+
         match self {
             ApiError::Database(error) => (
                 StatusCode::INTERNAL_SERVER_ERROR,

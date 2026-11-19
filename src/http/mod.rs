@@ -113,6 +113,7 @@ pub fn routes() -> Router<HttpState> {
         users::query::me,
         users::query::search_users,
         users::registration::register,
+        users::manage::update_user,
 
         photo_ratings::manage::rate_photo,
         photo_ratings::manage::delete_photo_rating,

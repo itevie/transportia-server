@@ -10,15 +10,13 @@ mod validation;
 use crate::bods::datafeed::BodsSiriVmClient;
 use crate::db::create_missing_comment_threads;
 use crate::db::resource::tram::tram_announcement_audio::TramAnnouncementAudios;
-use crate::fetchers::ttcdiecast::scrape_products;
 use crate::http::{ApiDoc, HttpState};
 use axum::extract::DefaultBodyLimit;
-use axum::http::{Method, header};
+use axum::http::{header, Method};
 use std::sync::Arc;
 use tower_http::compression::CompressionLayer;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;
-use tracing_subscriber::EnvFilter;
 use utoipa::OpenApi;
 
 #[tokio::main]

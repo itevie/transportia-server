@@ -664,7 +664,6 @@ impl Photos {
         user_id: Option<i64>,
     ) -> sqlx::Result<Vec<PhotoFilledOut>> {
         let mut filled_out = Vec::with_capacity(photos.len());
-
         for photo in photos {
             let details = match photo.photo_type {
                 PhotoType::Bus => {

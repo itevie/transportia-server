@@ -8,6 +8,8 @@ use crate::db::Database;
 use crate::db::resource::model_bus::model_bus_def::{ModelBus, ModelBusFilledOut};
 use crate::db::resource::photo::photo::PhotoQuery;
 use crate::db::resource::photo::photo_def::PhotoType;
+use crate::db::util::search_pro_max::{search_query, SearchQuery};
+use crate::search_query;
 
 pub static SQL_MODEL_BUSES: &str = r#"
 CREATE TABLE IF NOT EXISTS model_buses (
@@ -95,270 +97,104 @@ impl ModelBuses {
         .await
     }
 
+
     pub async fn search(&self, query: &ModelBusQuery) -> sqlx::Result<Vec<ModelBus>> {
         let page_length = query.page_length.unwrap_or(50).clamp(1, 1000);
         let offset = query.offset.unwrap_or(0).max(0);
 
-        let mut builder =
-            QueryBuilder::<Postgres>::new("SELECT mb.* FROM model_buses mb WHERE TRUE");
+        let search = SearchQuery::new(
+            "mb.*",
+            r#"
+            FROM model_buses mb
+            WHERE TRUE
+        "#,
+        )
+            // ILIKE filters
+            .ilike("mb.product_code", query.product_code.as_deref())
+            .ilike("mb.manufacturer", query.manufacturer.as_deref())
+            .ilike("mb.operator", query.operator.as_deref())
+            .ilike("mb.livery", query.livery.as_deref())
+            .ilike("mb.fleet_number", query.fleet_number.as_deref())
+            .ilike("mb.registration", query.registration.as_deref())
+            .ilike("mb.route_number", query.route_number.as_deref())
+            .ilike("mb.destination", query.destination.as_deref())
+            .ilike("mb.vehicle_type", query.vehicle_type.as_deref())
 
-        if let Some(value) = &query.product_code {
-            builder
-                .push(" AND mb.product_code ILIKE ")
-                .push_bind(format!("%{value}%"));
-        }
+            // Equality filters
+            .eq("mb.scale", query.scale)
+            .eq("mb.operator_link", query.operator_link.clone())
+            .eq("mb.livery_link", query.livery_link)
+            .eq("mb.vehicle_link", query.vehicle_link)
+            .eq("mb.route_link", query.route_link.clone())
+            .eq("mb.vehicle_type_link", query.vehicle_type_link)
+            .eq("mb.has_certificate", query.has_certificate)
+            .eq("mb.released", query.released.clone())
 
-        if let Some(value) = &query.manufacturer {
-            builder
-                .push(" AND mb.manufacturer ILIKE ")
-                .push_bind(format!("%{value}%"));
-        }
-
-        if let Some(value) = query.scale {
-            builder.push(" AND mb.scale = ").push_bind(value);
-        }
-
-        if let Some(value) = &query.operator {
-            builder
-                .push(" AND mb.operator ILIKE ")
-                .push_bind(format!("%{value}%"));
-        }
-
-        if let Some(value) = &query.operator_link {
-            builder.push(" AND mb.operator_link = ").push_bind(value);
-        }
-
-        if let Some(value) = &query.livery {
-            builder
-                .push(" AND mb.livery ILIKE ")
-                .push_bind(format!("%{value}%"));
-        }
-
-        if let Some(value) = query.livery_link {
-            builder.push(" AND mb.livery_link = ").push_bind(value);
-        }
-
-        if let Some(value) = &query.fleet_number {
-            builder
-                .push(" AND mb.fleet_number ILIKE ")
-                .push_bind(format!("%{value}%"));
-        }
-
-        if let Some(value) = &query.registration {
-            builder
-                .push(" AND mb.registration ILIKE ")
-                .push_bind(format!("%{value}%"));
-        }
-
-        if let Some(value) = query.vehicle_link {
-            builder.push(" AND mb.vehicle_link = ").push_bind(value);
-        }
-
-        if let Some(value) = &query.route_number {
-            builder
-                .push(" AND mb.route_number ILIKE ")
-                .push_bind(format!("%{value}%"));
-        }
-
-        if let Some(value) = &query.destination {
-            builder
-                .push(" AND mb.destination ILIKE ")
-                .push_bind(format!("%{value}%"));
-        }
-
-        if let Some(value) = &query.route_link {
-            builder.push(" AND mb.route_link = ").push_bind(value);
-        }
-
-        if let Some(value) = &query.vehicle_type {
-            builder
-                .push(" AND mb.vehicle_type ILIKE ")
-                .push_bind(format!("%{value}%"));
-        }
-
-        if let Some(value) = query.vehicle_type_link {
-            builder
-                .push(" AND mb.vehicle_type_link = ")
-                .push_bind(value);
-        }
-
-        if let Some(value) = query.has_certificate {
-            builder.push(" AND mb.has_certificate = ").push_bind(value);
-        }
-
-        if let Some(value) = &query.released {
-            builder.push(" AND mb.released = ").push_bind(value);
-        }
-
-        if let Some(has_image) = query.has_image {
-            if has_image {
-                builder.push(
-                    r#"
-                    AND EXISTS (
-                        SELECT 1
-                        FROM model_bus_photo_details mbpd
-                        WHERE mbpd.model_bus_link = mb.id
-                    )
-                    "#,
-                );
-            } else {
-                builder.push(
-                    r#"
-                    AND NOT EXISTS (
-                        SELECT 1
-                        FROM model_bus_photo_details mbpd
-                        WHERE mbpd.model_bus_link = mb.id
-                    )
-                    "#,
-                );
-            }
-        }
-
-        if let Some(value) = &query.search {
-            let search = value.to_lowercase().replace(' ', "");
-            let pattern = format!("%{search}%");
-
-            builder.push(
+            // Image existence
+            .exists(
+                query.has_image,
                 r#"
-                AND (
-                    REPLACE(LOWER(COALESCE(mb.product_code, '')), ' ', '') LIKE "#,
-            );
-            builder.push_bind(pattern.clone());
+            SELECT 1
+            FROM model_bus_photo_details mbpd
+            WHERE mbpd.model_bus_link = mb.id
+        "#,
+            )
 
-            builder.push(
-                r#"
-                    OR REPLACE(LOWER(COALESCE(mb.manufacturer, '')), ' ', '') LIKE "#,
-            );
-            builder.push_bind(pattern.clone());
+            // Normalized search across model bus fields
+            .normalized_search(
+                query.search.as_deref(),
+                [
+                    "mb.product_code",
+                    "mb.manufacturer",
+                    "mb.operator",
+                    "mb.livery",
+                    "mb.fleet_number",
+                    "mb.registration",
+                    "mb.route_number",
+                    "mb.destination",
+                    "mb.vehicle_type",
+                ],
+            )
 
-            builder.push(
-                r#"
-                    OR REPLACE(LOWER(COALESCE(mb.operator, '')), ' ', '') LIKE "#,
-            );
-            builder.push_bind(pattern.clone());
+            // Search linked vehicles
+            .normalized_exists(
+                "FROM bt_vehicles bv",
+                "bv.id = mb.vehicle_link",
+                [
+                    "bv.reg",
+                    "bv.fleet",
+                    "bv.previous_reg",
+                    "bv.name",
+                    "bv.branding",
+                    "bv.operator_id",
+                ],
+            )
 
-            builder.push(
-                r#"
-                    OR REPLACE(LOWER(COALESCE(mb.livery, '')), ' ', '') LIKE "#,
-            );
-            builder.push_bind(pattern.clone());
+            // Search linked vehicle types
+            .normalized_exists(
+                "FROM bt_vehicle_types bvt",
+                "bvt.id = mb.vehicle_type_link",
+                [
+                    "bvt.name",
+                    "bvt.style",
+                    "bvt.fuel",
+                ],
+            )
 
-            builder.push(
-                r#"
-                    OR REPLACE(LOWER(COALESCE(mb.fleet_number, '')), ' ', '') LIKE "#,
-            );
-            builder.push_bind(pattern.clone());
+            .order("mb.manufacturer ASC, mb.product_code ASC")
+            .limit(page_length)
+            .offset(Some(offset));
 
-            builder.push(
-                r#"
-                    OR REPLACE(LOWER(COALESCE(mb.registration, '')), ' ', '') LIKE "#,
-            );
-            builder.push_bind(pattern.clone());
+        let mut builder = QueryBuilder::<Postgres>::new("");
 
-            builder.push(
-                r#"
-                    OR REPLACE(LOWER(COALESCE(mb.route_number, '')), ' ', '') LIKE "#,
-            );
-            builder.push_bind(pattern.clone());
-
-            builder.push(
-                r#"
-                    OR REPLACE(LOWER(COALESCE(mb.destination, '')), ' ', '') LIKE "#,
-            );
-            builder.push_bind(pattern.clone());
-
-            builder.push(
-                r#"
-                    OR REPLACE(LOWER(COALESCE(mb.vehicle_type, '')), ' ', '') LIKE "#,
-            );
-            builder.push_bind(pattern.clone());
-
-            builder.push(
-                r#"
-                    OR EXISTS (
-                        SELECT 1
-                        FROM bt_vehicles bv
-                        WHERE bv.id = mb.vehicle_link
-                          AND (
-                            REPLACE(LOWER(COALESCE(bv.reg, '')), ' ', '') LIKE "#,
-            );
-            builder.push_bind(pattern.clone());
-
-            builder.push(
-                r#"
-                            OR REPLACE(LOWER(COALESCE(bv.fleet, '')), ' ', '') LIKE "#,
-            );
-            builder.push_bind(pattern.clone());
-
-            builder.push(
-                r#"
-                            OR REPLACE(LOWER(COALESCE(bv.previous_reg, '')), ' ', '') LIKE "#,
-            );
-            builder.push_bind(pattern.clone());
-
-            builder.push(
-                r#"
-                            OR REPLACE(LOWER(COALESCE(bv.name, '')), ' ', '') LIKE "#,
-            );
-            builder.push_bind(pattern.clone());
-
-            builder.push(
-                r#"
-                            OR REPLACE(LOWER(COALESCE(bv.branding, '')), ' ', '') LIKE "#,
-            );
-            builder.push_bind(pattern.clone());
-
-            builder.push(
-                r#"
-                            OR REPLACE(LOWER(COALESCE(bv.operator_id, '')), ' ', '') LIKE "#,
-            );
-            builder.push_bind(pattern.clone());
-
-            builder.push(
-                r#"
-                          )
-                    )
-                    OR EXISTS (
-                        SELECT 1
-                        FROM bt_vehicle_types bvt
-                        WHERE bvt.id = mb.vehicle_type_link
-                          AND (
-                            REPLACE(LOWER(COALESCE(bvt.name, '')), ' ', '') LIKE "#,
-            );
-            builder.push_bind(pattern.clone());
-
-            builder.push(
-                r#"
-                            OR REPLACE(LOWER(COALESCE(bvt.style, '')), ' ', '') LIKE "#,
-            );
-            builder.push_bind(pattern.clone());
-
-            builder.push(
-                r#"
-                            OR REPLACE(LOWER(COALESCE(bvt.fuel, '')), ' ', '') LIKE "#,
-            );
-            builder.push_bind(pattern);
-
-            builder.push(
-                r#"
-                          )
-                    )
-                )
-                "#,
-            );
-        }
-
-        builder
-            .push(" ORDER BY mb.manufacturer, mb.product_code LIMIT ")
-            .push_bind(page_length)
-            .push(" OFFSET ")
-            .push_bind(offset);
+        search_query(&mut builder, &search)?;
 
         builder
             .build_query_as::<ModelBus>()
             .fetch_all(&self.pool)
             .await
     }
+
 
     pub async fn create(&self, model_bus: &ModelBus) -> sqlx::Result<i64> {
         sqlx::query_scalar::<_, i64>(

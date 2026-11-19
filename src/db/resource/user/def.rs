@@ -1,8 +1,11 @@
+use crate::db::util::serde::double_option;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use bitflags::bitflags;
 use sqlx::FromRow;
+use crate::define_update;
+use crate::validation::fields::FieldValidationType;
 
 bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -30,3 +33,13 @@ pub struct User {
     pub trusted_user: bool,
     pub admin: bool,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct UserUpdate {
+    pub username: Option<String>,
+    #[serde(default, deserialize_with = "double_option")]
+    pub display_name: Option<Option<String>>,
+    #[serde(default, deserialize_with = "double_option")]
+    pub bio: Option<Option<String>>,
+}
+

@@ -94,6 +94,7 @@ pub struct ModelBusCreateResponse {
         )
     )
 )]
+#[axum::debug_handler]
 pub async fn search_model_buses(
     State(state): State<HttpState>,
     Query(query): Query<ModelBusQuery>,

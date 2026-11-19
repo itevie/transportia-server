@@ -96,7 +96,7 @@ impl Users {
                 CASE WHEN $2 THEN password_hash ELSE ''::TEXT END AS password_hash
             FROM users
             WHERE email = $1
-            "#,
+            "#, 
         )
         .bind(email.to_lowercase())
         .bind(include_sensitive)

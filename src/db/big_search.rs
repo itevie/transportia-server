@@ -5,6 +5,7 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::db::Database;
 use crate::db::resource::bustimes::livery_def::BtLivery;
+use crate::db::resource::bustimes::vehicle_type::VehicleTypeQuery;
 use crate::db::resource::bustimes::vehicle_type_def::BtVehicleType;
 use crate::db::resource::transxchange::line::TxLineQuery;
 use crate::db::resource::transxchange::line_def::TxLine;
@@ -50,7 +51,15 @@ pub async fn big_search(db: Arc<Database>, query: String) -> Result<BigSearchRes
         })
         .await?;
 
-    let vehicle_types = db.vehicle_types.search(query.as_str()).await?;
+    let vehicle_types = db.vehicle_types.search(&VehicleTypeQuery {
+        search: Some(query.clone()),
+        operator_id: None,
+        double_decker: None,
+        coach: None,
+        electric: None,
+        page_length: None,
+        offset: None,
+    }).await?;
 
     let liveries = db.liveries.search(query.as_str()).await?;
 

@@ -5,18 +5,14 @@ use axum::Json;
 use axum::extract::{Path, Query, State};
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
-
-#[derive(Deserialize, ToSchema, IntoParams)]
-pub struct VehicleTypeSearch {
-    pub query: String,
-}
+use crate::db::resource::bustimes::vehicle_type::VehicleTypeQuery;
 
 #[utoipa::path(
     get,
     path = "/vehicle-types",
     tag = "Bustimes",
     summary = "Query vehicle types",
-    params(VehicleTypeSearch),
+    params(VehicleTypeQuery),
     responses(
         (
             status = 200,
@@ -31,12 +27,12 @@ pub struct VehicleTypeSearch {
 )]
 pub async fn search_vehicle_types(
     State(state): State<HttpState>,
-    Query(query): Query<VehicleTypeSearch>,
+    Query(query): Query<VehicleTypeQuery>,
 ) -> Result<Json<Vec<BtVehicleType>>, ApiError> {
     let listings = state
         .db
         .vehicle_types
-        .search(&query.query)
+        .search(&query)
         .await
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 

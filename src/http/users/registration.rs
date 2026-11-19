@@ -7,6 +7,7 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use serde::Deserialize;
 use utoipa::ToSchema;
+use crate::validation::fields::{check_field_valid, FieldValidationType};
 
 #[derive(Deserialize, ToSchema)]
 pub struct RegistrationBody {
@@ -52,14 +53,10 @@ pub async fn register(
         return Err(ApiError::UsernameExists);
     }
 
-    if !validation::username(user.username.clone()) {
-        return Err(ApiError::InvalidUsername);
-    }
-
     state
         .db
         .users
-        .create(&user.email, &user.username, &user.password)
+        .create(&user.email, &check_field_valid(user.username, FieldValidationType::Username)?, &user.password)
         .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 

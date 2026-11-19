@@ -7,6 +7,11 @@ type EqBinder = Box<
     dyn for<'q> Fn(&mut QueryBuilder<Postgres>) + Send + Sync
 >;
 
+pub struct ExistsB<'a> {
+    pub sql: &'a str,
+    pub push_condition: Box<dyn Fn(&mut QueryBuilder<Postgres>) + Send + Sync + 'a>,
+}
+
 pub struct SearchQuery<'a> {
     pub select: &'a str,
     pub from: &'a str,
@@ -18,6 +23,7 @@ pub struct SearchQuery<'a> {
     pub eq: Vec<(&'a str, EqBinder)>,
 
     pub exists: Vec<(Option<bool>, &'a str)>,
+    pub exists_b: Vec<ExistsB<'a>>,
 
     pub search: Option<&'a str>,
     pub search_columns: Vec<&'a str>,
@@ -25,6 +31,7 @@ pub struct SearchQuery<'a> {
     pub normalized_search: Option<&'a str>,
     pub normalized_columns: Vec<&'a str>,
     pub normalized_exists: Vec<NormalizedExists<'a>>,
+    // pub normalized_exists_b: Vec<NormalizedExistsB<'a>>,
 
     pub order: &'a str,
     pub limit: i64,
@@ -37,6 +44,12 @@ pub struct NormalizedExists<'a> {
     pub columns: Vec<&'a str>,
 }
 
+// pub struct NormalizedExistsB<'a> {
+//     from: &'a str,
+//     columns: Vec<&'a str>,
+//     push_condition: Box<dyn Fn(&mut QueryBuilder<Postgres>) + 'a>,
+// }
+
 impl<'a> SearchQuery<'a> {
     pub fn new(select: &'a str, from: &'a str) -> Self {
         Self {
@@ -46,11 +59,13 @@ impl<'a> SearchQuery<'a> {
             ilike: Vec::new(),
             eq: Vec::new(),
             exists: Vec::new(),
+            exists_b: vec![],
             search: None,
             search_columns: Vec::new(),
             normalized_search: None,
             normalized_columns: Vec::new(),
             normalized_exists: Vec::new(),
+            // normalized_exists_b: vec![],
             order: "",
             limit: 50,
             offset: None,
@@ -112,6 +127,22 @@ impl<'a> SearchQuery<'a> {
         self
     }
 
+    pub fn exists_b(
+        mut self,
+        do_it: bool,
+        sql: &'a str,
+        push_condition: impl Fn(&mut QueryBuilder<Postgres>) + Send + Sync + 'a,
+    ) -> Self {
+        if !do_it {
+            return self;
+        }
+        self.exists_b.push(ExistsB {
+            sql,
+            push_condition: Box::new(push_condition),
+        });
+        self
+    }
+
     /// Searches multiple columns using ILIKE.
     pub fn search(
         mut self,
@@ -148,6 +179,20 @@ impl<'a> SearchQuery<'a> {
         });
         self
     }
+
+    // pub fn normalized_exists_b(
+    //     mut self,
+    //     from: &'a str,
+    //     columns: impl IntoIterator<Item = &'a str>,
+    //     push_condition: impl Fn(&mut QueryBuilder<Postgres>) + 'a,
+    // ) -> Self {
+    //     self.normalized_exists_b.push(NormalizedExistsB {
+    //         from,
+    //         columns: columns.into_iter().collect(),
+    //         push_condition: Box::new(push_condition),
+    //     });
+    //     self
+    // }
 
     pub fn order(mut self, order: &'a str) -> Self {
         self.order = order;
@@ -234,6 +279,17 @@ pub fn search_query(
         }
     }
 
+    // Parameterised EXISTS filters.
+    for exists in &query.exists_b {
+        builder
+            .push(" AND EXISTS (")
+            .push(exists.sql);
+
+        (exists.push_condition)(builder);
+
+        builder.push(")");
+    }
+
     // Regular multi-column search.
     if let Some(search) = query.search {
         push_search_columns(
@@ -272,7 +328,32 @@ pub fn search_query(
 
             builder.push("))");
         }
+
+        // Parameterised correlated EXISTS.
+        // for exists in &query.normalized_exists_b {
+        //     if exists.columns.is_empty() {
+        //         continue;
+        //     }
+        //
+        //     builder
+        //         .push(" AND EXISTS (SELECT 1 ")
+        //         .push(exists.from)
+        //         .push(" WHERE ");
+        //
+        //     (exists.push_condition)(builder);
+        //
+        //     builder.push(" AND (");
+        //
+        //     push_search_conditions(
+        //         builder,
+        //         search,
+        //         &exists.columns,
+        //     );
+        //
+        //     builder.push("))");
+        // }
     }
+
 
     // ORDER BY.
     if distinct_column.is_some() || !query.order.is_empty() {

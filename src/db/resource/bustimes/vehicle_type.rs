@@ -1,5 +1,9 @@
+use serde::{Deserialize, Serialize};
 use crate::db::resource::bustimes::vehicle_type_def::BtVehicleType;
-use sqlx::PgPool;
+use sqlx::{PgPool, Postgres, QueryBuilder};
+use utoipa::{IntoParams, ToSchema};
+use crate::db::resource::bustimes::vehicle_def::BtVehicle;
+use crate::db::util::search_pro_max::{search_query, SearchQuery};
 
 pub static SQL_BT_VEHICLE_TYPE: &str = r#"
 CREATE TABLE IF NOT EXISTS bt_vehicle_types (
@@ -16,6 +20,20 @@ CREATE TABLE IF NOT EXISTS bt_vehicle_types (
 #[derive(Clone)]
 pub struct BtVehicleTypes {
     pool: PgPool,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, IntoParams)]
+pub struct VehicleTypeQuery {
+    pub search: Option<String>,
+
+    pub operator_id: Option<String>,
+
+    pub double_decker: Option<bool>,
+    pub coach: Option<bool>,
+    pub electric: Option<bool>,
+
+    pub page_length: Option<i64>,
+    pub offset: Option<i64>,
 }
 
 impl BtVehicleTypes {
@@ -36,21 +54,51 @@ impl BtVehicleTypes {
         .await
     }
 
-    pub async fn search(&self, query: &str) -> sqlx::Result<Vec<BtVehicleType>> {
-        let search = format!("%{}%", query);
+    pub async fn search(&self, query: &VehicleTypeQuery) -> sqlx::Result<Vec<BtVehicleType>> {
+        let page_length = query.page_length.unwrap_or(50).clamp(1, 1000);
 
-        sqlx::query_as::<_, BtVehicleType>(
+        let mut search = SearchQuery::new(
+            "*",
             r#"
-            SELECT *
-            FROM bt_vehicle_types
-            WHERE name ILIKE $1
-            ORDER BY name
-            LIMIT 50
-            "#,
-        )
-        .bind(search)
-        .fetch_all(&self.pool)
-        .await
+                FROM bt_vehicle_types
+                WHERE TRUE
+            "#
+        );
+
+        let operator_id = query.operator_id.clone();
+
+        let search = search
+            .exists_b(
+                operator_id.is_some(),
+                "SELECT 1 FROM bt_vehicles v WHERE v.vehicle_type_id = bt_vehicle_types.id AND v.operator_id = ",
+                move |builder| {
+                    builder.push_bind(operator_id.clone());
+                },
+            )
+            .eq("double_decker", query.double_decker)
+            .eq("electric", query.electric)
+            .eq("coach", query.coach)
+            .search(
+                query.search.as_deref(),
+                ["name"],
+            )
+            .limit(page_length)
+            .offset(query.offset);
+
+        let mut builder = QueryBuilder::<Postgres>::new("");
+
+        search_query(&mut builder, &search)?;
+
+        println!("{:?}", builder.sql().as_str());
+
+        builder
+            .build_query_as::<BtVehicleType>()
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| {
+                println!("SQLx error: {e:#?}");
+                e
+            })
     }
 
     pub async fn get_by_name(&self, name: &str) -> sqlx::Result<Option<BtVehicleType>> {

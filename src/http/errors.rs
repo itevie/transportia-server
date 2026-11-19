@@ -18,6 +18,8 @@ pub enum ApiError {
     ValidationError(String),
 }
 
+pub type ApiErrorResult<T> = Result<T, ApiError>;
+
 impl From<sqlx::Error> for ApiError {
     fn from(error: sqlx::Error) -> Self {
         match error {

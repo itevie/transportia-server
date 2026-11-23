@@ -9,6 +9,8 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use serde::Deserialize;
 use utoipa::ToSchema;
+use crate::db::resource::favourite::favourite_def::FavouriteType;
+use crate::extractors::ratelimit::{FavouriteRatelimit, RateLimit};
 
 #[derive(Deserialize, ToSchema)]
 pub struct FavouriteGroupCreate {
@@ -41,6 +43,7 @@ pub struct FavouriteGroupCreate {
 pub async fn create_favourite_group(
     State(state): State<HttpState>,
     AuthUser { user_id }: AuthUser,
+    _ratelimit: RateLimit<FavouriteRatelimit>,
     Json(data): Json<FavouriteGroupCreate>,
 ) -> Result<Response, ApiError> {
     let id = state
@@ -70,7 +73,7 @@ pub async fn create_favourite_group(
 
 #[derive(Deserialize, ToSchema)]
 pub struct FavouriteGroupUpdate {
-    pub favourite_type: i64,
+    pub favourite_type: FavouriteType,
     pub name: String,
 }
 
@@ -106,6 +109,7 @@ pub struct FavouriteGroupUpdate {
 pub async fn update_favourite_group(
     State(state): State<HttpState>,
     AuthUser { user_id }: AuthUser,
+    _ratelimit: RateLimit<FavouriteRatelimit>,
     Path(id): Path<i64>,
     Json(data): Json<FavouriteGroupUpdate>,
 ) -> Result<Response, ApiError> {
@@ -149,6 +153,7 @@ pub async fn update_favourite_group(
 )]
 pub async fn delete_favourite_group(
     State(state): State<HttpState>,
+    _ratelimit: RateLimit<FavouriteRatelimit>,
     AuthUser { user_id }: AuthUser,
     Path(id): Path<i64>,
 ) -> Result<Response, ApiError> {

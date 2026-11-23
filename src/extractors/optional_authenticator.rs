@@ -23,7 +23,7 @@ where
             .and_then(|value| value.to_str().ok())
             .and_then(|auth| auth.strip_prefix("Bearer "))
             .and_then(|token| {
-                let secret = "my-cute-secret-which-no-one-will-crack";
+                let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET must be set");
 
                 decode::<JwtClaims>(
                     token,

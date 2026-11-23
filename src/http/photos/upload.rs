@@ -11,6 +11,7 @@ use axum::response::{IntoResponse, Response};
 use axum::{Json, extract::Multipart};
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
+use crate::extractors::ratelimit::{RateLimit, UpdateRatelimit, UploadRatelimit};
 
 #[derive(Debug, Deserialize, ToSchema, IntoParams)]
 pub struct UploadDetails {
@@ -50,6 +51,7 @@ pub struct UploadDetails {
 pub async fn upload_image(
     State(state): State<HttpState>,
     AuthUser { user_id }: AuthUser,
+    _ratelimit: RateLimit<UploadRatelimit>,
     Query(details): Query<UploadDetails>,
     mut multipart: Multipart,
 ) -> Result<Response, ApiError> {

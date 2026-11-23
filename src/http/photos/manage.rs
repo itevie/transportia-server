@@ -7,6 +7,7 @@ use crate::http::errors::ApiError;
 use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
+use crate::extractors::ratelimit::{DeleteRatelimit, RateLimit, UpdateRatelimit};
 
 #[utoipa::path(
     patch,
@@ -31,6 +32,7 @@ use axum::http::StatusCode;
 pub async fn update_photo(
     State(state): State<HttpState>,
     Path(id): Path<i64>,
+    _ratelimit: RateLimit<UpdateRatelimit>,
     AuthUser { user_id }: AuthUser,
     Json(update): Json<PhotoUpdate>,
 ) -> Result<StatusCode, ApiError> {
@@ -71,6 +73,7 @@ pub async fn update_photo(
 pub async fn delete_photo(
     State(state): State<HttpState>,
     Path(id): Path<i64>,
+    _ratelimit: RateLimit<DeleteRatelimit>,
     AuthUser { user_id }: AuthUser,
 ) -> Result<StatusCode, ApiError> {
     check_photo(state.db.clone(), id, user_id).await?;

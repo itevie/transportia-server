@@ -8,6 +8,7 @@ use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
+use crate::extractors::ratelimit::{AuthenticationRatelimit, QueryRatelimit, RateLimit, SearchRatelimit};
 
 #[utoipa::path(
     get,
@@ -25,6 +26,7 @@ use axum::response::{IntoResponse, Response};
 )]
 pub async fn get_user(
     State(state): State<HttpState>,
+    _ratelimit: RateLimit<QueryRatelimit>,
     Path(id): Path<i64>,
 ) -> Result<Response, ApiError> {
     let user = state
@@ -55,6 +57,7 @@ pub async fn get_user(
 )]
 pub async fn me(
     State(state): State<HttpState>,
+    _ratelimit: RateLimit<QueryRatelimit>,
     AuthUser { user_id }: AuthUser,
 ) -> Result<Response, ApiError> {
     let user = state
@@ -83,6 +86,7 @@ pub async fn me(
 )]
 pub async fn search_users(
     State(state): State<HttpState>,
+    _ratelimit: RateLimit<SearchRatelimit>,
     Query(query): Query<UserQuery>,
 ) -> Result<Json<Vec<User>>, String> {
     let listings = state

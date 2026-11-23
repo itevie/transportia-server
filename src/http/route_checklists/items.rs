@@ -10,6 +10,7 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
+use crate::extractors::ratelimit::{ChecklistRatelimit, RateLimit, UpdateRatelimit};
 
 #[utoipa::path(
     post,
@@ -54,6 +55,7 @@ use utoipa::{IntoParams, ToSchema};
 pub async fn create_route_checklist_item(
     State(state): State<HttpState>,
     AuthUser { user_id }: AuthUser,
+    _ratelimit: RateLimit<ChecklistRatelimit>,
     Path((checklist_id, obj_id)): Path<(i64, String)>,
 ) -> Result<Response, ApiError> {
     let checklist = check_route_checklist(state.db.clone(), checklist_id, user_id).await?;
@@ -114,6 +116,7 @@ pub async fn create_route_checklist_item(
 pub async fn create_route_checklist_item_from_operators(
     State(state): State<HttpState>,
     AuthUser { user_id }: AuthUser,
+    _ratelimit: RateLimit<ChecklistRatelimit>,
     Path((checklist_id, operator_id)): Path<(i64, String)>,
 ) -> Result<Response, ApiError> {
     let checklist = check_route_checklist(state.db.clone(), checklist_id, user_id).await?;
@@ -204,6 +207,7 @@ pub async fn create_route_checklist_item_from_operators(
 pub async fn create_route_checklist_items_from_operators_bulk(
     State(state): State<HttpState>,
     AuthUser { user_id }: AuthUser,
+    _ratelimit: RateLimit<ChecklistRatelimit>,
     Path(checklist_id): Path<i64>,
     Json(operator_ids): Json<Vec<String>>,
 ) -> Result<Response, ApiError> {
@@ -285,6 +289,7 @@ pub struct OperatorBulkCountOptions {
 )]
 pub async fn count_lines_from_operators_bulk(
     State(state): State<HttpState>,
+    _ratelimit: RateLimit<ChecklistRatelimit>,
     Json(json): Json<OperatorBulkCountOptions>,
 ) -> Result<Response, ApiError> {
     let mut count = 0usize;
@@ -366,6 +371,7 @@ pub async fn count_lines_from_operators_bulk(
 pub async fn complete_route_checklist_item(
     State(state): State<HttpState>,
     AuthUser { user_id }: AuthUser,
+    _ratelimit: RateLimit<ChecklistRatelimit>,
     Path((checklist_id, item_id)): Path<(i64, i64)>,
 ) -> Result<Response, ApiError> {
     check_route_checklist(state.db.clone(), checklist_id, user_id).await?;

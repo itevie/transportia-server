@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
 use crate::db::Database;
+use crate::db::resource::bustimes::livery::LiveryQuery;
 use crate::db::resource::bustimes::livery_def::BtLivery;
 use crate::db::resource::bustimes::vehicle_type::VehicleTypeQuery;
 use crate::db::resource::bustimes::vehicle_type_def::BtVehicleType;
@@ -61,7 +62,12 @@ pub async fn big_search(db: Arc<Database>, query: String) -> Result<BigSearchRes
         offset: None,
     }).await?;
 
-    let liveries = db.liveries.search(query.as_str()).await?;
+    let liveries = db.liveries.search(&LiveryQuery {
+        search: Some(query.clone()),
+        operator_id: None,
+        page_length: None,
+        offset: None,
+    }).await?;
 
     Ok(BigSearchResult {
         users,

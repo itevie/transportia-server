@@ -10,6 +10,7 @@ use crate::db::resource::tram::tram_announcement_audio::TramAnnouncementAudioQue
 use crate::db::resource::tram::tram_announcement_audio_def::TramAnnouncementAudio;
 use crate::extractors::authenticator::AuthUser;
 use crate::extractors::optional_authenticator::OptionalAuthUser;
+use crate::extractors::ratelimit::{MediaRatelimit, QueryRatelimit, RateLimit, SearchRatelimit, UpdateRatelimit};
 use crate::http::HttpState;
 use crate::http::errors::ApiError;
 
@@ -60,6 +61,7 @@ pub struct TramAnnouncementAudioCreateResponse {
 pub async fn search_tram_announcement_audios(
     State(state): State<HttpState>,
     Query(query): Query<TramAnnouncementAudioSearchQuery>,
+    _ratelimit: RateLimit<SearchRatelimit>,
     OptionalAuthUser(_user): OptionalAuthUser,
 ) -> Result<Json<Vec<TramAnnouncementAudio>>, ApiError> {
     let audios = state
@@ -109,6 +111,7 @@ pub async fn search_tram_announcement_audios(
 pub async fn get_tram_announcement_audio(
     State(state): State<HttpState>,
     Path(id): Path<i64>,
+    _ratelimit: RateLimit<QueryRatelimit>,
     OptionalAuthUser(_user): OptionalAuthUser,
 ) -> Result<Json<TramAnnouncementAudio>, ApiError> {
     let audio = state
@@ -133,6 +136,7 @@ pub async fn get_tram_announcement_audio(
 )]
 pub async fn get_tram_announcement_audio_groups(
     State(state): State<HttpState>,
+    _ratelimit: RateLimit<QueryRatelimit>,
 ) -> Result<impl IntoResponse, ApiError> {
     let groups = state
         .db
@@ -182,6 +186,7 @@ pub async fn get_tram_announcement_audio_groups(
 pub async fn update_tram_announcement_audio(
     State(state): State<HttpState>,
     Path(id): Path<i64>,
+    _ratelimit: RateLimit<UpdateRatelimit>,
     AuthUser { user_id }: AuthUser,
     Json(body): Json<TramAnnouncementAudioUpdateRequest>,
 ) -> Result<Response, ApiError> {
@@ -250,6 +255,7 @@ pub async fn update_tram_announcement_audio(
 pub async fn get_tram_announcement_audio_file(
     State(state): State<HttpState>,
     Path(id): Path<i64>,
+    _ratelimit: RateLimit<MediaRatelimit>,
     OptionalAuthUser(_user): OptionalAuthUser,
 ) -> Result<Response, ApiError> {
     let audio = state

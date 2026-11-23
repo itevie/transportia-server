@@ -10,6 +10,7 @@ use image::imageops::FilterType;
 use image::metadata::Orientation;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+use crate::extractors::ratelimit::{MediaRatelimit, RateLimit, UpdateRatelimit};
 
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
 pub struct PhotoImageQuery {
@@ -71,6 +72,7 @@ fn image_response(bytes: Vec<u8>) -> Response {
 pub async fn get_photo_image(
     State(state): State<HttpState>,
     Query(query): Query<PhotoImageQuery>,
+    _ratelimit: RateLimit<MediaRatelimit>,
     Path(id): Path<i64>,
 ) -> Result<Response, ApiError> {
     let width = query.width;

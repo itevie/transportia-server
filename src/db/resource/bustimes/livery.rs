@@ -1,5 +1,9 @@
+use serde::{Deserialize, Serialize};
 use crate::db::resource::bustimes::livery_def::BtLivery;
-use sqlx::PgPool;
+use sqlx::{PgPool, Postgres, QueryBuilder};
+use utoipa::{IntoParams, ToSchema};
+use crate::db::resource::bustimes::vehicle_type_def::BtVehicleType;
+use crate::db::util::search_pro_max::{search_query, SearchQuery};
 
 pub static SQL_BT_LIVERY: &str = r#"
 CREATE TABLE IF NOT EXISTS bt_liveries (
@@ -16,6 +20,16 @@ CREATE TABLE IF NOT EXISTS bt_liveries (
 #[derive(Clone)]
 pub struct BtLiveries {
     pool: PgPool,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, IntoParams)]
+pub struct LiveryQuery {
+    pub search: Option<String>,
+
+    pub operator_id: Option<String>,
+    
+    pub page_length: Option<i64>,
+    pub offset: Option<i64>,
 }
 
 impl BtLiveries {
@@ -36,21 +50,46 @@ impl BtLiveries {
         .await
     }
 
-    pub async fn search(&self, query: &str) -> sqlx::Result<Vec<BtLivery>> {
-        let search = format!("%{}%", query);
+    pub async fn search(&self, query: &LiveryQuery) -> sqlx::Result<Vec<BtLivery>> {
+        let page_length = query.page_length.unwrap_or(50).clamp(1, 1000);
 
-        sqlx::query_as::<_, BtLivery>(
+        let mut search = SearchQuery::new(
+            "*",
             r#"
-            SELECT *
-            FROM bt_liveries
-            WHERE name ILIKE $1
-            ORDER BY name
-            LIMIT 50
-            "#,
-        )
-        .bind(search)
-        .fetch_all(&self.pool)
-        .await
+                FROM bt_liveries
+                WHERE TRUE
+            "#
+        );
+
+        let operator_id = query.operator_id.clone();
+
+        let search = search
+            .exists_b(
+                operator_id.is_some(),
+                "SELECT 1 FROM bt_vehicles v WHERE v.livery_id = bt_liveries.id AND v.operator_id = ",
+                move |builder| {
+                    builder.push_bind(operator_id.clone());
+                },
+            )
+            .search(
+                query.search.as_deref(),
+                ["name"],
+            )
+            .limit(page_length)
+            .offset(query.offset);
+
+        let mut builder = QueryBuilder::<Postgres>::new("");
+
+        search_query(&mut builder, &search)?;
+
+        builder
+            .build_query_as::<BtLivery>()
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| {
+                println!("SQLx error: {e:#?}");
+                e
+            })
     }
 
     pub async fn get_by_name(&self, name: &str) -> sqlx::Result<Option<BtLivery>> {

@@ -1,6 +1,6 @@
 use crate::http::HttpState;
 use axum::Router;
-use axum::routing::get;
+use axum::routing::{get, post};
 
 mod tram_announcement_audios;
 pub mod tram_liveries;
@@ -12,8 +12,11 @@ pub fn routes() -> Router<HttpState> {
     Router::new()
         .route(
             "/trams",
-            get(vehicle::search_trams).post(vehicle::create_tram),
+            get(vehicle::search_trams)
+                .post(vehicle::create_tram)
         )
+        .route("/trams/csv", post(vehicle::preview_tram_csv))
+        .route("/trams/bulk", post(vehicle::tram_bulk_upload))
         .route(
             "/trams/{id}",
             get(vehicle::get_tram)

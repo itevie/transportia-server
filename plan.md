@@ -203,3 +203,23 @@ CREATE TABLE IF NOT EXISTS tram_announcement_audios (
     next_stop_id INTEGER REFERENCES tram_stops(id),
     created_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS forums(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    author_id INTEGER REFERENCES users(id) NOT NULL,
+    is_pinned BOOLEAN NOT NULL DEFAULT FALSE,
+    last_post TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS forum_posts(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    forum_id INTEGER REFERENCES forums(id) NOT NULL,
+    comment_thread_id BIGINT REFERENCES comment_threads(id),
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    author_id INTEGER REFERENCES users(id) NOT NULL,
+    created_at TEXT NOT NULL
+);

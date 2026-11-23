@@ -4,13 +4,14 @@ use crate::extractors::authenticator::AuthUser;
 use crate::http::HttpState;
 use crate::http::errors::ApiError;
 use axum::Json;
-use axum::extract::{Query, State};
+use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
+use crate::extractors::ratelimit::{FavouriteRatelimit, RateLimit};
 
 #[utoipa::path(
     get,
-    path = "/favourites-groups",
+    path = "/users/{user_id}/favourites/groups",
     tag = "Favourite Groups",
     summary = "Fetch favourite groups",
     description = "Fetches favourite groups with optional filtering and pagination.",
@@ -34,9 +35,22 @@ use axum::response::{IntoResponse, Response};
 )]
 pub async fn fetch_favourite_groups(
     State(state): State<HttpState>,
+    _ratelimit: RateLimit<FavouriteRatelimit>,
     AuthUser { user_id }: AuthUser,
+    Path(id): Path<i64>,
     Query(query): Query<FavouriteGroupQuery>,
 ) -> Result<Response, ApiError> {
+    let user = state
+        .db
+        .users
+        .get(id, false)
+        .await?
+        .ok_or_else(|| ApiError::NotFound(format!("User with id {} not found", id)))?;
+
+    if user.id != user_id && user.public_favourites == false {
+        return Err(ApiError::Unauthorized(format!("User {} does not have public favourites enabled", id)));
+    }
+
     let groups = state
         .db
         .favourites_groups

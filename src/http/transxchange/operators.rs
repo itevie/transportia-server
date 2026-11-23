@@ -6,6 +6,7 @@ use axum::Json;
 use axum::extract::{Path, Query, State};
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
+use crate::extractors::ratelimit::{QueryRatelimit, RateLimit, SearchRatelimit};
 
 #[derive(Deserialize, ToSchema, IntoParams)]
 pub struct OperatorsSearch {
@@ -32,6 +33,7 @@ pub struct OperatorsSearch {
 )]
 pub async fn search_operators(
     State(state): State<HttpState>,
+    _ratelimit: RateLimit<SearchRatelimit>,
     Query(query): Query<OperatorsSearch>,
 ) -> Result<Json<Vec<TxOperator>>, ApiError> {
     let operators = state
@@ -71,6 +73,7 @@ pub async fn search_operators(
 pub async fn get_operator(
     State(state): State<HttpState>,
     Path(id): Path<String>,
+    _ratelimit: RateLimit<QueryRatelimit>,
 ) -> Result<Json<TxOperator>, String> {
     println!("{}", id);
     let operator = state

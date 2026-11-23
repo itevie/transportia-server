@@ -9,6 +9,7 @@ use axum::http::StatusCode;
 use chrono::Utc;
 use serde::Deserialize;
 use utoipa::ToSchema;
+use crate::extractors::ratelimit::{CommentRatelimit, RateLimit};
 
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct CreateCommentRequest {
@@ -39,6 +40,7 @@ pub async fn create_comment(
     State(state): State<HttpState>,
     AuthUser { user_id }: AuthUser,
     Path(id): Path<i64>,
+    _ratelimit: RateLimit<CommentRatelimit>,
     Json(request): Json<CreateCommentRequest>,
 ) -> Result<(StatusCode, Json<CommentFilledOut>), ApiError> {
     if request.body.trim().is_empty() {
@@ -101,6 +103,7 @@ pub async fn update_comment(
     State(state): State<HttpState>,
     AuthUser { user_id }: AuthUser,
     Path(id): Path<i64>,
+    _ratelimit: RateLimit<CommentRatelimit>,
     Json(request): Json<UpdateCommentRequest>,
 ) -> Result<StatusCode, ApiError> {
     if request.body.trim().is_empty() {

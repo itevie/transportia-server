@@ -7,6 +7,7 @@ use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
+use crate::extractors::ratelimit::{FavouriteRatelimit, RateLimit};
 
 #[derive(Debug, Deserialize, ToSchema, IntoParams)]
 pub struct FavouriteFetchQuery {
@@ -18,7 +19,7 @@ pub struct FavouriteFetchQuery {
 // TODO: If they have public_favourites enabled
 #[utoipa::path(
     get,
-    path = "/favourites",
+    path = "/users/{user_id}/favourites",
     tag = "Favourites",
     summary = "Fetch all favourites given an object type",
     params(FavouriteFetchQuery),
@@ -41,12 +42,25 @@ pub struct FavouriteFetchQuery {
 pub async fn get_favourites(
     State(state): State<HttpState>,
     AuthUser { user_id }: AuthUser,
+    Path(id): Path<i64>,
+    _ratelimit: RateLimit<FavouriteRatelimit>,
     Query(query): Query<FavouriteFetchQuery>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
+    let user = state
+        .db
+        .users
+        .get(id, false)
+        .await?
+        .ok_or_else(|| ApiError::NotFound(format!("User with id {} not found", id)))?;
+
+    if user.id != user_id && user.public_favourites == false {
+        return Err(ApiError::Unauthorized(format!("User {} does not have public favourites enabled", id)));
+    }
+
     let favourites = state
         .db
         .favourites
-        .get_by_type(user_id, query.target_type)
+        .get_by_type(id, query.target_type)
         .await
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 
@@ -76,7 +90,7 @@ pub struct FavouriteGroupFetchQuery {
 
 #[utoipa::path(
     get,
-    path = "/favourites/group/{group_id}",
+    path = "/users/{user_id}/favourites/group/{group_id}",
     tag = "Favourites",
     summary = "Fetch favourites belonging to a group",
     params(
@@ -101,10 +115,22 @@ pub struct FavouriteGroupFetchQuery {
 )]
 pub async fn get_favourites_by_group(
     State(state): State<HttpState>,
-    AuthUser { user_id }: AuthUser,
-    Path(group_id): Path<i64>,
+    AuthUser { user_id: sender_user_id }: AuthUser,
+    _ratelimit: RateLimit<FavouriteRatelimit>,
+    Path((user_id, group_id)): Path<(i64, i64)>,
     Query(query): Query<FavouriteGroupFetchQuery>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
+    let user = state
+        .db
+        .users
+        .get(user_id, false)
+        .await?
+        .ok_or_else(|| ApiError::NotFound(format!("User with id {} not found", user_id)))?;
+
+    if user.id != sender_user_id && user.public_favourites == false {
+        return Err(ApiError::Unauthorized(format!("User {} does not have public favourites enabled", user_id)));
+    }
+
     let favourites = state
         .db
         .favourites
@@ -133,7 +159,7 @@ pub async fn get_favourites_by_group(
 
 #[utoipa::path(
     get,
-    path = "/favourites/{target_type}/{target_id}",
+    path = "/users/{user_id}/favourites/{target_type}/{target_id}",
     tag = "Favourites",
     summary = "Get a specific favourite",
     params(
@@ -162,7 +188,8 @@ pub async fn get_favourites_by_group(
 pub async fn get_favourite(
     State(state): State<HttpState>,
     AuthUser { user_id }: AuthUser,
-    Path((target_type, target_id)): Path<(FavouriteType, i64)>,
+    _ratelimit: RateLimit<FavouriteRatelimit>,
+    Path((path_user_id, target_type, target_id)): Path<(i64, FavouriteType, i64)>,
 ) -> Result<Json<Option<Favourite>>, ApiError> {
     let favourite = state
         .db

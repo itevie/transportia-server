@@ -1,12 +1,12 @@
 use crate::http::HttpState;
 use crate::http::errors::ApiError;
-use crate::http::users::validation;
 use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use serde::Deserialize;
 use utoipa::ToSchema;
+use crate::extractors::ratelimit::{AuthenticationRatelimit, RateLimit};
 use crate::validation::fields::{check_field_valid, FieldValidationType};
 
 #[derive(Deserialize, ToSchema)]
@@ -31,6 +31,7 @@ pub struct RegistrationBody {
 )]
 pub async fn register(
     State(state): State<HttpState>,
+    _ratelimit: RateLimit<AuthenticationRatelimit>,
     Json(user): Json<RegistrationBody>,
 ) -> Result<Response, ApiError> {
     if let Some(_) = state

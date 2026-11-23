@@ -6,6 +6,7 @@ use axum::extract::{Path, Query, State};
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
 use crate::db::resource::bustimes::vehicle_type::VehicleTypeQuery;
+use crate::extractors::ratelimit::{QueryRatelimit, RateLimit, SearchRatelimit};
 
 #[utoipa::path(
     get,
@@ -28,6 +29,7 @@ use crate::db::resource::bustimes::vehicle_type::VehicleTypeQuery;
 pub async fn search_vehicle_types(
     State(state): State<HttpState>,
     Query(query): Query<VehicleTypeQuery>,
+    _ratelimit: RateLimit<SearchRatelimit>
 ) -> Result<Json<Vec<BtVehicleType>>, ApiError> {
     let listings = state
         .db

@@ -11,6 +11,7 @@ use crate::db::resource::photo::photo::Photos;
 use crate::db::resource::transxchange::line_def::TxLine;
 use crate::{distinct_on, filter_bool, filter_eq, filter_ilike, filter_search, search_query};
 use crate::db::util::search_pro_max::{search_query, SearchQuery};
+use crate::db::util::unique_macro::ALLOWED_UNIQUE_FILTERS;
 
 pub static SQL_BT_VEHICLE: &str = r#"
 CREATE TABLE IF NOT EXISTS bt_vehicles (
@@ -105,17 +106,12 @@ impl BtVehicles {
         .await
     }
 
-
-
     pub async fn search(&self, query: &BtVehicleQuery) -> sqlx::Result<Vec<BtVehicle>> {
         let page_length = query.page_length.unwrap_or(50).clamp(1, 1000);
 
-        let allowed_unique = [
-            ("operator_id", "v.operator_id"),
-            ("vehicle_type_id", "v.vehicle_type_id"),
-            ("livery_id", "v.livery_id"),
-            ("vehicle_type_id", "v.vehicle_type_id")
-        ];
+        let allowed_unique = ALLOWED_UNIQUE_FILTERS
+            .get("vehicles")
+            .unwrap();
 
         let mut search = SearchQuery::new(
             "v.*",

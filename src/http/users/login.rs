@@ -7,6 +7,7 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use serde::Deserialize;
 use utoipa::ToSchema;
+use crate::extractors::ratelimit::{AuthenticationRatelimit, QueryRatelimit, RateLimit};
 
 #[derive(Deserialize, ToSchema)]
 pub struct LoginBody {
@@ -28,8 +29,10 @@ pub struct LoginBody {
 )]
 pub async fn login(
     State(state): State<HttpState>,
+    _ratelimit: RateLimit<AuthenticationRatelimit>,
     Json(user): Json<LoginBody>,
 ) -> Result<Response, ApiError> {
+    println!("3");
     if let None = state
         .db
         .users
@@ -51,7 +54,7 @@ pub async fn login(
         None => return Err(ApiError::UserNotFound),
     };
 
-    let jwt = util::jwt::create_jwt(user, "my-cute-secret-which-no-one-will-crack")
+    let jwt = util::jwt::create_jwt(user, &*std::env::var("JWT_SECRET").unwrap())
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 
     Ok((StatusCode::CREATED, jwt).into_response())

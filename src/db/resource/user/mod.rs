@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
     display_name TEXT,
     bio TEXT,
     password_hash TEXT NOT NULL,
+    public_favourites BOOLEAN NOT NULL DEFAULT FALSE,
     trusted_user BOOLEAN NOT NULL DEFAULT FALSE,
     admin BOOLEAN NOT NULL DEFAULT FALSE
 )
@@ -45,6 +46,7 @@ impl Users {
                 display_name,
                 bio,
                 trusted_user,
+                public_favourites,
                 admin,
                 ''::TEXT AS password_hash
             FROM users
@@ -67,6 +69,7 @@ impl Users {
                 display_name,
                 bio,
                 trusted_user,
+                public_favourites,
                 admin,
                 ''::TEXT AS password_hash
             FROM users
@@ -92,6 +95,7 @@ impl Users {
                 display_name,
                 bio,
                 trusted_user,
+                public_favourites,
                 admin,
                 CASE WHEN $2 THEN password_hash ELSE ''::TEXT END AS password_hash
             FROM users
@@ -116,6 +120,7 @@ impl Users {
                 display_name,
                 bio,
                 trusted_user,
+                public_favourites,
                 admin,
                 ''::TEXT AS password_hash
             FROM users
@@ -170,27 +175,25 @@ impl Users {
     pub async fn update(&self, user: &User) -> sqlx::Result<()> {
         sqlx::query(
             r#"
-            UPDATE users SET
-                email = $1,
-                username = $2,
-                display_name = $3,
-                bio = $4,
-                password_hash = $5,
-                trusted_user = $6,
-                admin = $7
-            WHERE id = $8
-            "#,
-        )
-        .bind(&user.email)
-        .bind(&user.username)
-        .bind(&user.display_name)
-        .bind(&user.bio)
-        .bind(&user.password_hash)
-        .bind(user.trusted_user)
-        .bind(user.admin)
-        .bind(user.id)
-        .execute(&self.pool)
-        .await?;
+                UPDATE users SET
+                    username = $1,
+                    display_name = $2,
+                    bio = $3,
+                    trusted_user = $4,
+                    admin = $5,
+                    public_favourites = $6
+                WHERE id = $7
+                "#,
+            )
+            .bind(&user.username)
+            .bind(&user.display_name)
+            .bind(&user.bio)
+            .bind(user.trusted_user)
+            .bind(user.admin)
+            .bind(user.public_favourites)
+            .bind(user.id)
+            .execute(&self.pool)
+            .await?;
 
         Ok(())
     }

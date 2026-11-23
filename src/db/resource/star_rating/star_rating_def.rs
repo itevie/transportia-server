@@ -10,7 +10,7 @@ pub struct PhotoRating {
     pub user_id: i64,
 
     /// 1-5
-    pub rating: i64,
+    pub rating: i32,
 
     pub created_at: String,
 }

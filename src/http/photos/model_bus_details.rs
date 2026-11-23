@@ -4,6 +4,7 @@ use axum::http::StatusCode;
 
 use crate::db::resource::photo::model_bus_photo_details_def::ModelBusPhotoDetailsUpdate;
 use crate::db::resource::photo::photo::Photos;
+use crate::extractors::ratelimit::{RateLimit, UpdateRatelimit};
 use crate::http::HttpState;
 use crate::http::errors::ApiError;
 
@@ -30,6 +31,7 @@ use crate::http::errors::ApiError;
 pub async fn update_details(
     State(state): State<HttpState>,
     Path(id): Path<i64>,
+    _ratelimit: RateLimit<UpdateRatelimit>,
     Json(update): Json<ModelBusPhotoDetailsUpdate>,
 ) -> Result<StatusCode, ApiError> {
     // TODO: Require auth and check if user owns it

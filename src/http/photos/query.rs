@@ -8,6 +8,7 @@ use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
+use crate::extractors::ratelimit::{DeleteRatelimit, QueryRatelimit, RateLimit, SearchRatelimit};
 
 #[utoipa::path(
     get,
@@ -30,6 +31,7 @@ use axum::response::{IntoResponse, Response};
 pub async fn query_photos(
     State(state): State<HttpState>,
     OptionalAuthUser(user): OptionalAuthUser,
+    _ratelimit: RateLimit<SearchRatelimit>,
     Query(query): Query<PhotoQuery>,
 ) -> Result<Json<Vec<PhotoFilledOut>>, ApiError> {
     let photos = state
@@ -77,6 +79,7 @@ pub async fn query_photos(
 pub async fn get_photo(
     State(state): State<HttpState>,
     OptionalAuthUser(user): OptionalAuthUser,
+    _ratelimit: RateLimit<QueryRatelimit>,
     Path(id): Path<i64>,
 ) -> Result<Response, ApiError> {
     let photo = state

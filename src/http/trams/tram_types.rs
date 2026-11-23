@@ -9,6 +9,7 @@ use crate::auth::quick::{is_admin, is_trusted_user};
 use crate::db::resource::tram::tram_type_def::TramType;
 use crate::extractors::authenticator::AuthUser;
 use crate::extractors::optional_authenticator::OptionalAuthUser;
+use crate::extractors::ratelimit::{CreateRatelimit, DeleteRatelimit, QueryRatelimit, RateLimit, SearchRatelimit, UpdateRatelimit};
 use crate::http::HttpState;
 use crate::http::errors::ApiError;
 
@@ -53,6 +54,7 @@ pub struct TramTypeCreateResponse {
 pub async fn search_tram_types(
     State(state): State<HttpState>,
     Query(query): Query<TramTypeSearchQuery>,
+    _ratelimit: RateLimit<SearchRatelimit>,
     OptionalAuthUser(_user): OptionalAuthUser,
 ) -> Result<Json<Vec<TramType>>, ApiError> {
     let tram_types = state
@@ -92,6 +94,7 @@ pub async fn search_tram_types(
 pub async fn get_tram_type(
     State(state): State<HttpState>,
     Path(id): Path<i64>,
+    _ratelimit: RateLimit<QueryRatelimit>,
     OptionalAuthUser(_user): OptionalAuthUser,
 ) -> Result<Json<TramType>, ApiError> {
     let tram_type = state
@@ -137,6 +140,7 @@ pub async fn get_tram_type(
 pub async fn create_tram_type(
     State(state): State<HttpState>,
     AuthUser { user_id }: AuthUser,
+    _ratelimit: RateLimit<CreateRatelimit>,
     Json(body): Json<TramTypeCreateRequest>,
 ) -> Result<Response, ApiError> {
     is_trusted_user(state.db.clone(), user_id).await?;
@@ -194,6 +198,7 @@ pub async fn create_tram_type(
 pub async fn update_tram_type(
     State(state): State<HttpState>,
     Path(id): Path<i64>,
+    _ratelimit: RateLimit<UpdateRatelimit>,
     AuthUser { user_id }: AuthUser,
     Json(body): Json<TramTypeUpdateRequest>,
 ) -> Result<Response, ApiError> {
@@ -258,6 +263,7 @@ pub async fn update_tram_type(
 pub async fn delete_tram_type(
     State(state): State<HttpState>,
     Path(id): Path<i64>,
+    _ratelimit: RateLimit<DeleteRatelimit>,
     AuthUser { user_id }: AuthUser,
 ) -> Result<Response, ApiError> {
     is_admin(state.db.clone(), user_id).await?;

@@ -9,6 +9,7 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use serde::Deserialize;
 use utoipa::ToSchema;
+use crate::extractors::ratelimit::{ChecklistRatelimit, RateLimit};
 
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct RouteChecklistCreate {
@@ -42,6 +43,7 @@ pub struct RouteChecklistCreate {
 pub async fn create_route_checklist(
     State(state): State<HttpState>,
     AuthUser { user_id }: AuthUser,
+    _ratelimit: RateLimit<ChecklistRatelimit>,
     Json(data): Json<RouteChecklistCreate>,
 ) -> Result<Response, ApiError> {
     let checklist = state
@@ -99,6 +101,7 @@ pub async fn create_route_checklist(
 pub async fn delete_route_checklist(
     State(state): State<HttpState>,
     AuthUser { user_id }: AuthUser,
+    _ratelimit: RateLimit<ChecklistRatelimit>,
     Path(id): Path<i64>,
 ) -> Result<Response, ApiError> {
     check_route_checklist(state.db.clone(), id, user_id).await?;

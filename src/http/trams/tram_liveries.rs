@@ -7,8 +7,10 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::auth::quick::{is_admin, is_trusted_user};
 use crate::db::resource::tram::tram_livery_def::TramLivery;
+use crate::db::util::search_pro_max::SearchQuery;
 use crate::extractors::authenticator::AuthUser;
 use crate::extractors::optional_authenticator::OptionalAuthUser;
+use crate::extractors::ratelimit::{CreateRatelimit, DeleteRatelimit, QueryRatelimit, RateLimit, SearchRatelimit, UpdateRatelimit};
 use crate::http::HttpState;
 use crate::http::errors::ApiError;
 
@@ -57,6 +59,7 @@ pub struct TramLiveryCreateResponse {
 pub async fn search_tram_liveries(
     State(state): State<HttpState>,
     Query(query): Query<TramLiverySearchQuery>,
+    _ratelimit: RateLimit<SearchRatelimit>,
     OptionalAuthUser(_user): OptionalAuthUser,
 ) -> Result<Json<Vec<TramLivery>>, ApiError> {
     let liveries = state
@@ -96,6 +99,7 @@ pub async fn search_tram_liveries(
 pub async fn get_tram_livery(
     State(state): State<HttpState>,
     Path(id): Path<i64>,
+    _ratelimit: RateLimit<QueryRatelimit>,
     OptionalAuthUser(_user): OptionalAuthUser,
 ) -> Result<Json<TramLivery>, ApiError> {
     let livery = state
@@ -141,6 +145,7 @@ pub async fn get_tram_livery(
 pub async fn create_tram_livery(
     State(state): State<HttpState>,
     AuthUser { user_id }: AuthUser,
+    _ratelimit: RateLimit<CreateRatelimit>,
     Json(body): Json<TramLiveryCreateRequest>,
 ) -> Result<Response, ApiError> {
     is_trusted_user(state.db.clone(), user_id).await?;
@@ -200,6 +205,7 @@ pub async fn create_tram_livery(
 pub async fn update_tram_livery(
     State(state): State<HttpState>,
     Path(id): Path<i64>,
+    _ratelimit: RateLimit<UpdateRatelimit>,
     AuthUser { user_id }: AuthUser,
     Json(body): Json<TramLiveryUpdateRequest>,
 ) -> Result<Response, ApiError> {
@@ -272,6 +278,7 @@ pub async fn update_tram_livery(
 pub async fn delete_tram_livery(
     State(state): State<HttpState>,
     Path(id): Path<i64>,
+    _ratelimit: RateLimit<DeleteRatelimit>,
     AuthUser { user_id }: AuthUser,
 ) -> Result<Response, ApiError> {
     is_admin(state.db.clone(), user_id).await?;

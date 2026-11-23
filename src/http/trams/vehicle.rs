@@ -1,5 +1,5 @@
 use axum::Json;
-use axum::extract::{Path, Query, State};
+use axum::extract::{Multipart, Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use serde::{Deserialize, Serialize};
@@ -10,6 +10,7 @@ use crate::db::resource::tram::tram::{TramQuery, Trams};
 use crate::db::resource::tram::tram_def::{Tram, TramFilledOut};
 use crate::extractors::authenticator::AuthUser;
 use crate::extractors::optional_authenticator::OptionalAuthUser;
+use crate::extractors::ratelimit::{CreateRatelimit, DeleteRatelimit, QueryRatelimit, RateLimit, SearchRatelimit, UpdateRatelimit};
 use crate::http::HttpState;
 use crate::http::errors::ApiError;
 
@@ -47,6 +48,42 @@ pub struct TramCreateResponse {
     pub id: i64,
 }
 
+#[derive(Debug, Deserialize, Serialize, ToSchema)]
+pub struct TramBulkUpload {
+    pub trams: Vec<TramCreateRequest>,
+}
+
+#[derive(Debug, Deserialize)]
+struct TramCsvRow {
+    fleet: String,
+    operator_id: Option<i64>,
+    tram_type_id: Option<i64>,
+    #[serde(default)]
+    name: Option<String>,
+    #[serde(default)]
+    withdrawn: String,
+    #[serde(default)]
+    garage: Option<String>,
+    #[serde(default)]
+    branding: Option<String>,
+}
+
+impl From<TramCsvRow> for Tram {
+    fn from(row: TramCsvRow) -> Self {
+        Self {
+            id: 0,
+            fleet: row.fleet,
+            operator_id: row.operator_id,
+            livery_id: None,
+            tram_type_id: row.tram_type_id,
+            name: row.name.filter(|x| !x.is_empty()),
+            withdrawn: matches!(row.withdrawn.to_lowercase().as_str(), "true" | "1"),
+            garage: row.garage.filter(|x| !x.is_empty()),
+            branding: row.branding.filter(|x| !x.is_empty()),
+        }
+    }
+}
+
 #[utoipa::path(
     get,
     path = "/trams",
@@ -68,6 +105,7 @@ pub struct TramCreateResponse {
 pub async fn search_trams(
     State(state): State<HttpState>,
     Query(query): Query<TramQuery>,
+    _ratelimit: RateLimit<SearchRatelimit>,
     OptionalAuthUser(user): OptionalAuthUser,
 ) -> Result<Json<Vec<TramFilledOut>>, ApiError> {
     let trams = state
@@ -111,6 +149,7 @@ pub async fn search_trams(
 pub async fn get_tram(
     State(state): State<HttpState>,
     Path(id): Path<i64>,
+    _ratelimit: RateLimit<QueryRatelimit>,
     OptionalAuthUser(user): OptionalAuthUser,
 ) -> Result<Json<TramFilledOut>, ApiError> {
     let tram = state
@@ -160,6 +199,7 @@ pub async fn get_tram(
 pub async fn create_tram(
     State(state): State<HttpState>,
     AuthUser { user_id }: AuthUser,
+    _ratelimit: RateLimit<CreateRatelimit>,
     Json(body): Json<TramCreateRequest>,
 ) -> Result<Response, ApiError> {
     is_trusted_user(state.db.clone(), user_id).await?;
@@ -224,6 +264,7 @@ pub async fn create_tram(
 pub async fn update_tram(
     State(state): State<HttpState>,
     Path(id): Path<i64>,
+    _ratelimit: RateLimit<UpdateRatelimit>,
     AuthUser { user_id }: AuthUser,
     Json(body): Json<TramUpdateRequest>,
 ) -> Result<Response, ApiError> {
@@ -316,6 +357,7 @@ pub async fn update_tram(
 pub async fn delete_tram(
     State(state): State<HttpState>,
     Path(id): Path<i64>,
+    _ratelimit: RateLimit<DeleteRatelimit>,
     AuthUser { user_id }: AuthUser,
 ) -> Result<Response, ApiError> {
     is_admin(state.db.clone(), user_id).await?;
@@ -336,4 +378,159 @@ pub async fn delete_tram(
         .map_err(|err| ApiError::Database(err.to_string()))?;
 
     Ok(StatusCode::NO_CONTENT.into_response())
+}
+
+
+#[derive(Deserialize, utoipa::ToSchema)]
+pub struct TramCsvUploadRequest {
+    pub csv: String,
+}
+
+#[utoipa::path(
+    post,
+    path = "/trams/csv",
+    tag = "Trams",
+    summary = "Preview a tram CSV import",
+    request_body = TramCsvUploadRequest,
+    responses(
+        (
+            status = 200,
+            description = "Parsed tram objects",
+            body = [TramFilledOut]
+        ),
+        (
+            status = 400,
+            description = "Invalid CSV"
+        ),
+        (
+            status = 401,
+            description = "Authentication required"
+        ),
+        (
+            status = 403,
+            description = "User is not trusted"
+        ),
+        (
+            status = 500,
+            description = "Internal server error"
+        )
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn preview_tram_csv(
+    State(state): State<HttpState>,
+    AuthUser { user_id }: AuthUser,
+    _ratelimit: RateLimit<CreateRatelimit>,
+    Json(request): Json<TramCsvUploadRequest>,
+) -> Result<Response, ApiError> {
+    is_trusted_user(state.db.clone(), user_id).await?;
+
+    let mut reader = csv::ReaderBuilder::new()
+        .trim(csv::Trim::All)
+        .from_reader(request.csv.as_bytes());
+
+    let mut trams = Vec::new();
+
+    for (index, result) in reader.deserialize::<TramCsvRow>().enumerate() {
+        let row = match result {
+            Ok(row) => row,
+            Err(err) => {
+                return Ok((
+                    StatusCode::BAD_REQUEST,
+                    format!("Invalid CSV row {}: {}", index + 2, err),
+                )
+                    .into_response());
+            }
+        };
+
+        if row.fleet.is_empty() {
+            return Ok((
+                StatusCode::BAD_REQUEST,
+                format!("Fleet number is missing on CSV row {}", index + 2),
+            )
+                .into_response());
+        }
+
+        trams.push(Tram::from(row));
+    }
+
+    if trams.is_empty() {
+        return Ok((
+            StatusCode::BAD_REQUEST,
+            "The CSV contains no trams",
+        )
+            .into_response());
+    }
+
+    let filled_out = Trams::fill_out(
+        state.db.clone(),
+        trams,
+        Some(user_id),
+    )
+        .await
+        .map_err(|err| ApiError::Database(err.to_string()))?;
+
+    Ok(Json(filled_out).into_response())
+}
+#[utoipa::path(
+    post,
+    path = "/trams/bulk",
+    tag = "Trams",
+    summary = "Upload Trams in bulk",
+    request_body = TramBulkUpload,
+    responses(
+        (status = 201, description = "Trams imported successfully", body = usize),
+        (status = 400, description = "Invalid import"),
+        (status = 401, description = "Authentication required"),
+        (status = 403, description = "User is not trusted"),
+        (status = 500, description = "Internal server error")
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn tram_bulk_upload(
+    State(state): State<HttpState>,
+    AuthUser { user_id }: AuthUser,
+    _ratelimit: RateLimit<CreateRatelimit>,
+    Json(body): Json<TramBulkUpload>,
+) -> Result<Response, ApiError> {
+    is_trusted_user(state.db.clone(), user_id).await?;
+
+    if body.trams.is_empty() {
+        return Ok((
+            StatusCode::BAD_REQUEST,
+            "No trams provided",
+        ).into_response());
+    }
+
+    let mut created_count = 0;
+
+    for body in body.trams {
+        let tram = Tram {
+            id: 0,
+            operator_id: body.operator_id,
+            fleet: body.fleet,
+            livery_id: body.livery_id,
+            tram_type_id: body.tram_type_id,
+            name: body.name,
+            garage: body.garage,
+            withdrawn: body.withdrawn,
+            branding: body.branding,
+        };
+
+        let id = state
+            .db
+            .trams
+            .upsert(&tram)
+            .await
+            .map_err(|err| ApiError::Database(err.to_string()))?;
+
+        if id != 0 {
+            created_count += 1;
+        }
+    }
+
+    Ok((
+        StatusCode::CREATED,
+        Json(created_count),
+    ).into_response())
 }

@@ -50,7 +50,7 @@ impl<'q> sqlx::Encode<'q, sqlx::Postgres> for FavouriteType {
 
 impl<'r> sqlx::Decode<'r, sqlx::Postgres> for FavouriteType {
     fn decode(value: sqlx::postgres::PgValueRef<'r>) -> Result<Self, sqlx::error::BoxDynError> {
-        let value = <i64 as sqlx::Decode<sqlx::Postgres>>::decode(value)?;
+        let value = <i32 as sqlx::Decode<sqlx::Postgres>>::decode(value)?;
 
         match value {
             0 => Ok(Self::Photo),

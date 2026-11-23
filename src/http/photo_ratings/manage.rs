@@ -7,16 +7,17 @@ use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
+use crate::extractors::ratelimit::{RateLimit, RatingRatelimit};
 
 #[derive(Debug, Deserialize, IntoParams)]
 pub struct PhotoRatingQuery {
     /// Rating from 1 to 5
-    pub rating: i64,
+    pub rating: i32,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
 pub struct PhotoRatingResponse {
-    pub rating: Option<i64>,
+    pub rating: Option<i32>,
     pub average_rating: f64,
 }
 
@@ -56,6 +57,7 @@ pub async fn rate_photo(
     State(state): State<HttpState>,
     AuthUser { user_id }: AuthUser,
     Path(photo_id): Path<i64>,
+    _ratelimit: RateLimit<RatingRatelimit>,
     Query(query): Query<PhotoRatingQuery>,
 ) -> Result<Json<PhotoRatingResponse>, ApiError> {
     if !(1..=5).contains(&query.rating) {
@@ -138,6 +140,7 @@ pub async fn rate_photo(
 pub async fn delete_photo_rating(
     State(state): State<HttpState>,
     AuthUser { user_id }: AuthUser,
+    _ratelimit: RateLimit<RatingRatelimit>,
     Path(photo_id): Path<i64>,
 ) -> Result<Json<PhotoRatingResponse>, ApiError> {
     state

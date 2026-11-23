@@ -7,6 +7,7 @@ use axum::extract::{Path, Query, State};
 use axum::http::{Response, StatusCode};
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
+use crate::extractors::ratelimit::{FavouriteRatelimit, RateLimit};
 
 #[derive(Debug, Deserialize, ToSchema, IntoParams)]
 pub struct FavouriteQuery {
@@ -16,7 +17,7 @@ pub struct FavouriteQuery {
 
 #[utoipa::path(
     post,
-    path = "/favourites",
+    path = "/users/{user_id}/favourites",
     tag = "Favourites",
     summary = "Create a favourite for an object",
     params(FavouriteQuery),
@@ -37,6 +38,8 @@ pub struct FavouriteQuery {
 pub async fn create_favourite(
     State(state): State<HttpState>,
     AuthUser { user_id }: AuthUser,
+    Path(path_user_id): Path<i64>,
+    _ratelimit: RateLimit<FavouriteRatelimit>,
     Query(query): Query<FavouriteQuery>,
 ) -> Result<StatusCode, ApiError> {
     state
@@ -51,7 +54,7 @@ pub async fn create_favourite(
 
 #[utoipa::path(
     delete,
-    path = "/favourites",
+    path = "/users/{user_id}/favourites",
     tag = "Favourites",
     summary = "Remove a favourite for an object",
     params(FavouriteQuery),
@@ -72,6 +75,8 @@ pub async fn create_favourite(
 pub async fn delete_favourite(
     State(state): State<HttpState>,
     AuthUser { user_id }: AuthUser,
+    Path(path_user_id): Path<i64>,
+    _ratelimit: RateLimit<FavouriteRatelimit>,
     Query(query): Query<FavouriteQuery>,
 ) -> Result<StatusCode, ApiError> {
     state
@@ -91,7 +96,7 @@ pub struct UpdateFavouriteGroupRequest {
 
 #[utoipa::path(
     patch,
-    path = "/favourites/group/{target_type}/{target_id}",
+    path = "/users/{user_id}/favourites/group/{target_type}/{target_id}",
     tag = "Favourites",
     summary = "Update the group of a favourite",
     params(
@@ -121,7 +126,8 @@ pub struct UpdateFavouriteGroupRequest {
 pub async fn update_favourite_group(
     State(state): State<HttpState>,
     AuthUser { user_id }: AuthUser,
-    Path((target_type, target_id)): Path<(FavouriteType, i64)>,
+    Path((path_user_id, target_type, target_id)): Path<(i64, FavouriteType, i64)>,
+    _ratelimit: RateLimit<FavouriteRatelimit>,
     Json(request): Json<UpdateFavouriteGroupRequest>,
 ) -> Result<Json<bool>, ApiError> {
     let updated = state

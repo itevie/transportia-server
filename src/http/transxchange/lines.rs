@@ -4,6 +4,7 @@ use crate::db::resource::transxchange::line_def::TxLine;
 use crate::http::HttpState;
 use axum::Json;
 use axum::extract::{Query, State};
+use crate::extractors::ratelimit::{QueryRatelimit, RateLimit, SearchRatelimit};
 
 #[utoipa::path(
     get,
@@ -26,6 +27,7 @@ use axum::extract::{Query, State};
 pub async fn search_lines(
     State(state): State<HttpState>,
     Query(query): Query<TxLineQuery>,
+    _ratelimit: RateLimit<SearchRatelimit>,
 ) -> Result<Json<Vec<TxLine>>, String> {
     let listings = state
         .db

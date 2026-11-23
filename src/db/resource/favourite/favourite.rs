@@ -71,7 +71,6 @@ impl Favourites {
         target_type: FavouriteType,
         target_id: i64,
     ) -> sqlx::Result<Option<Favourite>> {
-        println!("1");
         sqlx::query_as::<_, Favourite>(
             r#"
             SELECT

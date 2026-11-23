@@ -89,8 +89,6 @@ impl BtVehicleTypes {
 
         search_query(&mut builder, &search)?;
 
-        println!("{:?}", builder.sql().as_str());
-
         builder
             .build_query_as::<BtVehicleType>()
             .fetch_all(&self.pool)

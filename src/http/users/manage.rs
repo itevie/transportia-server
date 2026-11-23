@@ -5,6 +5,7 @@ use crate::auth::quick::check_photo;
 use crate::db::resource::photo::photo_def::PhotoUpdate;
 use crate::db::resource::user::def::UserUpdate;
 use crate::extractors::authenticator::AuthUser;
+use crate::extractors::ratelimit::{AuthenticationRatelimit, RateLimit, UpdateRatelimit};
 use crate::http::errors::ApiError;
 use crate::http::HttpState;
 use crate::validation::fields::{check_field_valid, check_field_valid_option, FieldValidationType};
@@ -32,6 +33,7 @@ use crate::validation::fields::{check_field_valid, check_field_valid_option, Fie
 pub async fn update_user(
     State(state): State<HttpState>,
     Path(id): Path<i64>,
+    _ratelimit: RateLimit<UpdateRatelimit>,
     AuthUser { user_id }: AuthUser,
     Json(update): Json<UserUpdate>,
 ) -> Result<StatusCode, ApiError> {

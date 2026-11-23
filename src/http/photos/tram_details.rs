@@ -5,6 +5,7 @@ use crate::http::errors::ApiError;
 use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
+use crate::extractors::ratelimit::{RateLimit, UpdateRatelimit};
 
 #[utoipa::path(
     patch,
@@ -29,6 +30,7 @@ use axum::http::StatusCode;
 pub async fn update_details(
     State(state): State<HttpState>,
     Path(id): Path<i64>,
+    _ratelimit: RateLimit<UpdateRatelimit>,
     Json(update): Json<TramPhotoDetailsUpdate>,
 ) -> Result<StatusCode, ApiError> {
     // TODO: Require auth and check if user owns it

@@ -25,7 +25,7 @@ where
             .strip_prefix("Bearer ")
             .ok_or(StatusCode::UNAUTHORIZED)?;
 
-        let secret = "my-cute-secret-which-no-one-will-crack".to_string();
+        let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET must be set");
 
         let token_data = decode::<JwtClaims>(
             token,

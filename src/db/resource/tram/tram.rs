@@ -20,7 +20,8 @@ CREATE TABLE IF NOT EXISTS trams (
     garage TEXT,
     withdrawn BOOLEAN NOT NULL DEFAULT FALSE,
     name TEXT,
-    branding TEXT
+    branding TEXT,
+    UNIQUE NULLS NOT DISTINCT (fleet, operator_id, tram_type_id)
 );
 "#;
 
@@ -187,6 +188,42 @@ impl Trams {
         .bind(&tram.branding)
         .fetch_one(&self.pool)
         .await
+    }
+
+    pub async fn upsert(&self, tram: &Tram) -> sqlx::Result<i64> {
+        sqlx::query_scalar::<_, i64>(
+            r#"
+        INSERT INTO trams (
+            operator_id,
+            fleet,
+            livery_id,
+            tram_type_id,
+            garage,
+            withdrawn,
+            name,
+            branding
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        ON CONFLICT (fleet, operator_id, tram_type_id)
+        DO UPDATE SET
+            livery_id = EXCLUDED.livery_id,
+            garage = EXCLUDED.garage,
+            withdrawn = EXCLUDED.withdrawn,
+            name = EXCLUDED.name,
+            branding = EXCLUDED.branding
+        RETURNING id
+        "#,
+        )
+            .bind(tram.operator_id)
+            .bind(&tram.fleet)
+            .bind(tram.livery_id)
+            .bind(tram.tram_type_id)
+            .bind(&tram.garage)
+            .bind(tram.withdrawn)
+            .bind(&tram.name)
+            .bind(&tram.branding)
+            .fetch_one(&self.pool)
+            .await
     }
 
     pub async fn update(&self, tram: &Tram) -> sqlx::Result<()> {

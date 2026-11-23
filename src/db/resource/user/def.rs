@@ -29,6 +29,8 @@ pub struct User {
     pub bio: Option<String>,
 
     pub password_hash: String,
+    
+    pub public_favourites: bool,
 
     pub trusted_user: bool,
     pub admin: bool,
@@ -37,6 +39,9 @@ pub struct User {
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct UserUpdate {
     pub username: Option<String>,
+    pub public_favourites: Option<bool>,
+    
+    // Nullable
     #[serde(default, deserialize_with = "double_option")]
     pub display_name: Option<Option<String>>,
     #[serde(default, deserialize_with = "double_option")]

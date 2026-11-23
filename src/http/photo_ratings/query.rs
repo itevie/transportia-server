@@ -4,6 +4,7 @@ use crate::http::errors::ApiError;
 use crate::http::photo_ratings::manage::PhotoRatingResponse;
 use axum::Json;
 use axum::extract::{Path, State};
+use crate::extractors::ratelimit::{RateLimit, RatingRatelimit};
 
 #[utoipa::path(
     get,
@@ -35,6 +36,7 @@ use axum::extract::{Path, State};
 pub async fn get_photo_rating(
     State(state): State<HttpState>,
     AuthUser { user_id }: AuthUser,
+    _ratelimit: RateLimit<RatingRatelimit>,
     Path(photo_id): Path<i64>,
 ) -> Result<Json<PhotoRatingResponse>, ApiError> {
     let rating = state

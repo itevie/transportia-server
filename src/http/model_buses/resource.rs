@@ -10,6 +10,7 @@ use crate::db::resource::model_bus::model_bus::{ModelBusQuery, ModelBuses};
 use crate::db::resource::model_bus::model_bus_def::{ModelBus, ModelBusFilledOut};
 use crate::extractors::authenticator::AuthUser;
 use crate::extractors::optional_authenticator::OptionalAuthUser;
+use crate::extractors::ratelimit::{RateLimit, SearchRatelimit};
 use crate::http::HttpState;
 use crate::http::errors::ApiError;
 
@@ -98,6 +99,7 @@ pub struct ModelBusCreateResponse {
 pub async fn search_model_buses(
     State(state): State<HttpState>,
     Query(query): Query<ModelBusQuery>,
+    _ratelimit: RateLimit<SearchRatelimit>,
     OptionalAuthUser(_user): OptionalAuthUser,
 ) -> Result<Json<Vec<ModelBusFilledOut>>, ApiError> {
     let model_buses = state

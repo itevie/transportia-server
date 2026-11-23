@@ -12,6 +12,7 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+use crate::extractors::ratelimit::{QueryRatelimit, RateLimit, SearchRatelimit, UpdateRatelimit};
 
 #[utoipa::path(
     get,
@@ -34,18 +35,17 @@ use utoipa::ToSchema;
 pub async fn search_vehicles(
     State(state): State<HttpState>,
     Query(query): Query<BtVehicleQuery>,
+    _ratelimit: RateLimit<SearchRatelimit>,
     OptionalAuthUser(user): OptionalAuthUser,
-) -> Result<Json<Vec<BtVehicleFilleOut>>, String> {
+) -> Result<Json<Vec<BtVehicleFilleOut>>, ApiError> {
     let listings = state
         .db
         .vehicles
         .search(&query)
-        .await
-        .map_err(|err| err.to_string())?;
+        .await?;
 
     let filled_out = BtVehicles::fill_out(state.db.clone(), listings, user.map(|x| x.user_id))
-        .await
-        .map_err(|err| err.to_string())?;
+        .await?;
 
     Ok(Json(filled_out))
 }
@@ -77,6 +77,7 @@ pub async fn search_vehicles(
 pub async fn get_vehicle(
     State(state): State<HttpState>,
     Path(id): Path<i64>,
+    _ratelimit: RateLimit<QueryRatelimit>,
     OptionalAuthUser(user): OptionalAuthUser,
 ) -> Result<Json<BtVehicleFilleOut>, String> {
     let vehicle = state
@@ -143,6 +144,7 @@ pub async fn update_vehicle(
     State(state): State<HttpState>,
     Path(id): Path<i64>,
     AuthUser { user_id }: AuthUser,
+    _ratelimit: RateLimit<UpdateRatelimit>,
     Json(body): Json<BtVehicleUpdateQuery>,
 ) -> Result<Response, ApiError> {
     is_trusted_user(state.db.clone(), user_id).await?;

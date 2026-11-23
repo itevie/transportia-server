@@ -18,6 +18,7 @@ use tower_http::compression::CompressionLayer;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;
 use utoipa::OpenApi;
+use crate::extractors::ratelimit::RateLimitState;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -62,6 +63,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         db: db_arc.clone(),
         s3: Arc::from(util::s3::create_r2_client().await),
         bods_client: BodsSiriVmClient::new(std::env::var("BODS_API_KEY").unwrap()).unwrap(),
+        ratelimit: RateLimitState::new(
+            std::env::var("JWT_SECRET")
+                .expect("JWT_SECRET must be configured")
+                .as_bytes(),
+        ),
     };
 
     let cors = CorsLayer::new()
@@ -92,7 +98,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Server running on http://localhost:3000");
 
-    axum::serve(listener, app).await?;
+
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
+    )
+        .await?;
 
     Ok(())
 }

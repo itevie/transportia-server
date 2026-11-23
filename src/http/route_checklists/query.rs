@@ -10,6 +10,7 @@ use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
+use crate::extractors::ratelimit::{ChecklistRatelimit, RateLimit};
 
 #[utoipa::path(
     get,
@@ -32,6 +33,7 @@ use axum::response::{IntoResponse, Response};
 pub async fn get_route_checklist(
     State(state): State<HttpState>,
     Path(id): Path<i64>,
+    _ratelimit: RateLimit<ChecklistRatelimit>,
     AuthUser { user_id }: AuthUser,
 ) -> Result<Response, ApiError> {
     let item = check_route_checklist(state.db.clone(), id, user_id).await?;
@@ -64,6 +66,7 @@ pub async fn get_route_checklist(
 pub async fn get_route_checklist_items(
     State(state): State<HttpState>,
     Path(id): Path<i64>,
+    _ratelimit: RateLimit<ChecklistRatelimit>,
     AuthUser { user_id }: AuthUser,
 ) -> Result<Response, ApiError> {
     let checklist = check_route_checklist(state.db.clone(), id, user_id).await?;
@@ -97,6 +100,7 @@ pub async fn get_route_checklist_items(
 )]
 pub async fn get_route_checklists(
     State(state): State<HttpState>,
+    _ratelimit: RateLimit<ChecklistRatelimit>,
     AuthUser { user_id }: AuthUser,
 ) -> Result<Response, ApiError> {
     let items = state

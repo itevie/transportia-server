@@ -5,6 +5,7 @@ use axum::Router;
 use meta::meta;
 use std::sync::Arc;
 use utoipa::OpenApi;
+use crate::extractors::ratelimit::RateLimitState;
 
 mod big_search;
 mod bods;
@@ -29,6 +30,7 @@ pub struct HttpState {
     pub db: Arc<Database>,
     pub s3: Arc<aws_sdk_s3::Client>,
     pub bods_client: BodsSiriVmClient,
+    pub ratelimit: RateLimitState
 }
 
 pub fn routes() -> Router<HttpState> {

@@ -5,18 +5,15 @@ use axum::Json;
 use axum::extract::{Path, Query, State};
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
-
-#[derive(Deserialize, ToSchema, IntoParams)]
-pub struct LiverySearch {
-    pub query: String,
-}
+use crate::db::resource::bustimes::livery::LiveryQuery;
+use crate::extractors::ratelimit::{QueryRatelimit, RateLimit, SearchRatelimit};
 
 #[utoipa::path(
     get,
     path = "/liveries",
     tag = "Bustimes",
     summary = "Query liveries",
-    params(LiverySearch),
+    params(LiveryQuery),
     responses(
         (
             status = 200,
@@ -31,12 +28,13 @@ pub struct LiverySearch {
 )]
 pub async fn search_liveries(
     State(state): State<HttpState>,
-    Query(query): Query<LiverySearch>,
+    Query(query): Query<LiveryQuery>,
+    _ratelimit: RateLimit<SearchRatelimit>
 ) -> Result<Json<Vec<BtLivery>>, String> {
     let listings = state
         .db
         .liveries
-        .search(&query.query)
+        .search(&query)
         .await
         .map_err(|err| err.to_string())?;
 

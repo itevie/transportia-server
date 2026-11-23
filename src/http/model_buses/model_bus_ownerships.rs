@@ -14,6 +14,7 @@ use crate::db::resource::model_bus::model_bus_ownership_def::{
 };
 use crate::extractors::authenticator::AuthUser;
 use crate::extractors::optional_authenticator::OptionalAuthUser;
+use crate::extractors::ratelimit::{CreateRatelimit, QueryRatelimit, RateLimit, SearchRatelimit};
 use crate::http::HttpState;
 use crate::http::errors::ApiError;
 
@@ -58,6 +59,7 @@ pub struct ModelBusOwnershipCreateResponse {
 pub async fn search_model_bus_ownerships(
     State(state): State<HttpState>,
     Query(query): Query<ModelBusOwnershipQuery>,
+    _ratelimit: RateLimit<SearchRatelimit>,
     AuthUser { user_id }: AuthUser,
 ) -> Result<Json<Vec<ModelBusOwnershipFilledOut>>, ApiError> {
     let mut query = query;
@@ -107,6 +109,7 @@ pub async fn search_model_bus_ownerships(
 pub async fn get_model_bus_ownership(
     State(state): State<HttpState>,
     Path(id): Path<i64>,
+    _ratelimit: RateLimit<QueryRatelimit>,
     AuthUser { user_id }: AuthUser,
 ) -> Result<Json<ModelBusOwnershipFilledOut>, ApiError> {
     let ownership = state
@@ -157,6 +160,7 @@ pub async fn get_model_bus_ownership(
 pub async fn create_model_bus_ownership(
     State(state): State<HttpState>,
     AuthUser { user_id }: AuthUser,
+    _ratelimit: RateLimit<CreateRatelimit>,
     Json(body): Json<ModelBusOwnershipCreateRequest>,
 ) -> Result<Response, ApiError> {
     is_trusted_user(state.db.clone(), user_id).await?;

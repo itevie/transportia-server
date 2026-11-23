@@ -5,7 +5,6 @@ use tracing_subscriber::registry;
 pub mod login;
 pub mod query;
 pub mod registration;
-pub mod validation;
 pub mod manage;
 
 pub fn routes() -> Router<HttpState> {

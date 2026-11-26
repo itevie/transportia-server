@@ -99,7 +99,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .layer(TraceLayer::new_for_http())
         .with_state(state);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
+    let port = std::env::var("PORT")
+        .unwrap_or_else(|_| "3000".to_string())
+        .parse::<u16>()?;
+
+    let listener = tokio::net::TcpListener::bind(("0.0.0.0", port)).await?;
 
     println!("Server running on http://localhost:3000");
 

@@ -23,12 +23,12 @@ pub fn routes() -> Router<HttpState> {
             get(resource::search_potential_model_buses_for_vehicle),
         )
         .route(
-            "/model-bus-ownerships",
+            "/users/{id}/model-bus-ownerships",
             get(model_bus_ownerships::search_model_bus_ownerships)
                 .post(model_bus_ownerships::create_model_bus_ownership),
         )
         .route(
-            "/model-bus-ownerships/{id}",
+            "/users/{id}/model-bus-ownerships/{id}",
             get(model_bus_ownerships::get_model_bus_ownership)
                 .patch(model_bus_ownerships::update_model_bus_ownership)
                 .delete(model_bus_ownerships::delete_model_bus_ownership),

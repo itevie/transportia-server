@@ -1,5 +1,5 @@
 use crate::auth::quick::check_photo;
-use crate::db::resource::photo::photo_def::PhotoUpdate;
+use crate::db::resource::photo::photo_def::{PhotoType, PhotoUpdate};
 use crate::extractors::authenticator::AuthUser;
 use crate::extractors::optional_authenticator::OptionalAuthUserResult;
 use crate::http::HttpState;
@@ -42,6 +42,47 @@ pub async fn update_photo(
         .db
         .photos
         .patch(id, &update)
+        .await
+        .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
+
+#[utoipa::path(
+    patch,
+    path = "/photos/{id}/photo-type/{new_type}",
+    tag = "Photos",
+    summary = "Update a photo's type",
+    responses(
+        (
+            status = 204,
+            description = "Success",
+        ),
+        (
+            status = 500,
+            description = "Internal server error"
+        )
+    ),
+    security(
+        ("bearer_auth" = [])
+    )
+)]
+pub async fn update_photo_type(
+    State(state): State<HttpState>,
+    Path((id, t)): Path<(i64, PhotoType)>,
+    _ratelimit: RateLimit<UpdateRatelimit>,
+    AuthUser { user_id }: AuthUser,
+) -> Result<StatusCode, ApiError> {
+    let mut photo = check_photo(state.db.clone(), id, user_id).await?;
+
+    photo.photo_type = t;
+    photo.obj_details_id = None;
+
+    state
+        .db
+        .photos
+        .update(&photo)
         .await
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 

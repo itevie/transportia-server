@@ -375,7 +375,7 @@ impl ModelBuses {
 
             let photos = db
                 .photos
-                .search(&PhotoQuery {
+                .search_new(&PhotoQuery {
                     id: None,
                     author_id: None,
                     photo_type: Some(PhotoType::ModelBus),
@@ -417,7 +417,7 @@ impl ModelBuses {
                 })
                 .await?;
 
-            let photo = photos.into_iter().next();
+            let photo = photos.items.into_iter().next();
 
             filled_out.push(ModelBusFilledOut {
                 id: model_bus.id,

@@ -12,6 +12,7 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+use crate::db::util::pagination::PaginatedResponse;
 use crate::extractors::ratelimit::{QueryRatelimit, RateLimit, SearchRatelimit, UpdateRatelimit};
 
 #[utoipa::path(
@@ -37,17 +38,27 @@ pub async fn search_vehicles(
     Query(query): Query<BtVehicleQuery>,
     _ratelimit: RateLimit<SearchRatelimit>,
     OptionalAuthUser(user): OptionalAuthUser,
-) -> Result<Json<Vec<BtVehicleFilleOut>>, ApiError> {
+) -> Result<Json<PaginatedResponse<BtVehicleFilleOut>>, ApiError> {
     let listings = state
         .db
         .vehicles
         .search(&query)
         .await?;
 
-    let filled_out = BtVehicles::fill_out(state.db.clone(), listings, user.map(|x| x.user_id))
+    let filled_out = BtVehicles::fill_out(
+        state.db.clone(),
+        listings.items,
+        user.map(|x| x.user_id),
+    )
         .await?;
 
-    Ok(Json(filled_out))
+    let response = PaginatedResponse {
+        current_page: listings.current_page,
+        total_count: listings.total_count,
+        items: filled_out,
+    };
+
+    Ok(Json(response))
 }
 
 #[utoipa::path(

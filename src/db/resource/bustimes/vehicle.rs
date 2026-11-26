@@ -5,11 +5,12 @@ use sqlx::{PgPool, Postgres, QueryBuilder};
 use utoipa::{IntoParams, ToSchema};
 
 use crate::db::Database;
-use crate::db::resource::bustimes::vehicle_def::{BtVehicle, BtVehicleFilleOut};
+use crate::db::resource::bustimes::vehicle_def::{BtVehicle, BtVehicleFilleOut, BtVehicleSearchResult};
 use crate::db::resource::favourite::favourite_def::FavouriteType;
 use crate::db::resource::photo::photo::Photos;
 use crate::db::resource::transxchange::line_def::TxLine;
 use crate::{distinct_on, filter_bool, filter_eq, filter_ilike, filter_search, search_query};
+use crate::db::util::pagination::PaginatedResponse;
 use crate::db::util::search_pro_max::{search_query, SearchQuery};
 use crate::db::util::unique_macro::ALLOWED_UNIQUE_FILTERS;
 
@@ -89,6 +90,19 @@ impl BtVehicles {
         .await
     }
 
+    pub async fn count(&self, id: i64) -> sqlx::Result<Option<BtVehicle>> {
+        sqlx::query_as::<_, BtVehicle>(
+            r#"
+            SELECT COUNT(*)
+            FROM bt_vehicles
+            WHERE id = $1
+            "#,
+        )
+            .bind(id)
+            .fetch_optional(&self.pool)
+            .await
+    }
+
     pub async fn get_by_national_operator_code(
         &self,
         national_code: &str,
@@ -106,7 +120,7 @@ impl BtVehicles {
         .await
     }
 
-    pub async fn search(&self, query: &BtVehicleQuery) -> sqlx::Result<Vec<BtVehicle>> {
+    pub async fn search(&self, query: &BtVehicleQuery) -> sqlx::Result<PaginatedResponse<BtVehicle>> {
         let page_length = query.page_length.unwrap_or(50).clamp(1, 1000);
 
         let allowed_unique = ALLOWED_UNIQUE_FILTERS
@@ -114,7 +128,7 @@ impl BtVehicles {
             .unwrap();
 
         let mut search = SearchQuery::new(
-            "v.*",
+            "v.*, COUNT(*) OVER() AS total_count",
             r#"
                 FROM bt_vehicles v
                 LEFT JOIN bt_vehicle_types vt
@@ -178,10 +192,24 @@ impl BtVehicles {
 
         search_query(&mut builder, &search)?;
 
-        builder
-            .build_query_as::<BtVehicle>()
+        let results = builder
+            .build_query_as::<BtVehicleSearchResult>()
             .fetch_all(&self.pool)
-            .await
+            .await?;
+
+        let total_count = results
+            .first()
+            .map(|result| result.total_count)
+            .unwrap_or(0);
+
+        Ok(PaginatedResponse {
+            current_page: query.offset.unwrap_or(0) / page_length + 1,
+            total_count,
+            items: results
+                .into_iter()
+                .map(|result| result.vehicle)
+                .collect(),
+        })
     }
 
 

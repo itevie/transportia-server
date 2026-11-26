@@ -54,3 +54,10 @@ pub struct BtVehicleFilleOut {
 
     pub is_favourited: Option<bool>,
 }
+
+#[derive(sqlx::FromRow)]
+pub struct BtVehicleSearchResult {
+    #[sqlx(flatten)]
+    pub(crate) vehicle: BtVehicle,
+    pub(crate) total_count: i64,
+}

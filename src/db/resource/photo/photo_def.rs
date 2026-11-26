@@ -6,6 +6,8 @@ use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use sqlx::FromRow;
 use utoipa::ToSchema;
+use crate::db::resource::bustimes::vehicle_def::BtVehicle;
+use crate::db::resource::photo::photo::PhotoQuery;
 
 #[derive(Debug, Clone, Copy, Serialize_repr, Deserialize_repr, ToSchema)]
 #[repr(i64)]
@@ -60,6 +62,10 @@ pub struct Photo {
     pub uploaded_id: String,
     pub title: String,
     pub description: Option<String>,
+
+    #[schema(value_type = Option<serde_json::Value>)]
+    pub exif: Option<sqlx::types::Json<serde_json::Value>>,
+
     pub created_at: String,
 }
 
@@ -79,6 +85,13 @@ pub struct PhotoFilledOut {
     pub created_at: String,
 
     pub is_favourited: Option<bool>,
+}
+
+#[derive(sqlx::FromRow)]
+pub struct PhotoSearchResult {
+    #[sqlx(flatten)]
+    pub(crate) photo: Photo,
+    pub(crate) total_count: i64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]

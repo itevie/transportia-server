@@ -327,7 +327,7 @@ impl ModelBusOwnerships {
 
             let photo = db
                 .photos
-                .search(&PhotoQuery {
+                .search_new(&PhotoQuery {
                     id: None,
                     author_id: None,
                     photo_type: Some(PhotoType::ModelBus),
@@ -362,14 +362,15 @@ impl ModelBusOwnerships {
                     mbd_released: None,
                     mbd_model_id: Some(model.id),
                     mbd_has_matched_model: None,
-                    mbd_owner_id: user_id,
+                    mbd_owner_id: None,
                     page_length: None,
                     offset: None,
                     order_by: None,
                 })
                 .await?
-                .into_iter()
-                .next();
+                .items
+                .first()
+                .cloned();
 
             filled_out.push(ModelBusOwnershipFilledOut {
                 id: model.id,

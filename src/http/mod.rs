@@ -24,6 +24,7 @@ pub mod route_checklists;
 mod trams;
 pub mod transxchange;
 pub mod users;
+mod flickr_proxy;
 
 #[derive(Clone)]
 pub struct HttpState {
@@ -36,6 +37,7 @@ pub struct HttpState {
 pub fn routes() -> Router<HttpState> {
     Router::new()
         .route("/meta", axum::routing::get(meta))
+        .route("/flickr", axum::routing::get(flickr_proxy::flickr_photos))
         .route(
             "/everything-search",
             axum::routing::get(big_search::big_search_route),

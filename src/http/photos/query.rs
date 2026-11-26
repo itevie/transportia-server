@@ -8,6 +8,7 @@ use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
+use crate::db::util::pagination::PaginatedResponse;
 use crate::extractors::ratelimit::{DeleteRatelimit, QueryRatelimit, RateLimit, SearchRatelimit};
 
 #[utoipa::path(
@@ -33,19 +34,25 @@ pub async fn query_photos(
     OptionalAuthUser(user): OptionalAuthUser,
     _ratelimit: RateLimit<SearchRatelimit>,
     Query(query): Query<PhotoQuery>,
-) -> Result<Json<Vec<PhotoFilledOut>>, ApiError> {
+) -> Result<Json<PaginatedResponse<PhotoFilledOut>>, ApiError> {
     let photos = state
         .db
         .photos
-        .search(&query)
+        .search_new(&query)
         .await
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 
-    let filled_out = Photos::fill_out(state.db.clone(), photos, user.map(|x| x.user_id))
+    let filled_out = Photos::fill_out(state.db.clone(), photos.items, user.map(|x| x.user_id))
         .await
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 
-    Ok(Json(filled_out))
+    let response = PaginatedResponse {
+        current_page: photos.current_page,
+        total_count: photos.total_count,
+        items: filled_out,
+    };
+
+    Ok(Json(response))
 }
 
 #[utoipa::path(

@@ -15,4 +15,5 @@ pub fn routes() -> Router<HttpState> {
             axum::routing::get(operators::get_operator),
         )
         .route("/lines", axum::routing::get(lines::search_lines))
+        .route("/lines/{id}", axum::routing::get(lines::get_line))
 }

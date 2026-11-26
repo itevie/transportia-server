@@ -1,13 +1,13 @@
 use crate::auth::quick::check_route_checklist;
 use crate::db::resource::checklist::checklist::Checklists;
 use crate::db::resource::checklist::checklist_def::Checklist;
-use crate::db::resource::checklist::checklist_item::ChecklistItems;
+use crate::db::resource::checklist::checklist_item::{ChecklistItemSearch, ChecklistItems};
 use crate::db::resource::checklist::checklist_item_def::ChecklistItem;
 use crate::extractors::authenticator::AuthUser;
 use crate::http::HttpState;
 use crate::http::errors::ApiError;
 use axum::Json;
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use crate::extractors::ratelimit::{ChecklistRatelimit, RateLimit};
@@ -49,9 +49,10 @@ pub async fn get_route_checklist(
     get,
     path = "/route-checklists/{id}/items",
     tag = "Route Checklists",
-    summary = "Get items in a route checklist",
+    summary = "Search items in a route checklist",
     params(
-        ("id" = i64, Path, description = "Route checklist ID")
+        ("id" = i64, Path, description = "Route checklist ID"),
+        ChecklistItemSearch
     ),
     responses(
         (status = 200, description = "Route checklist items", body = Vec<ChecklistItem>),
@@ -66,6 +67,7 @@ pub async fn get_route_checklist(
 pub async fn get_route_checklist_items(
     State(state): State<HttpState>,
     Path(id): Path<i64>,
+    Query(query): Query<ChecklistItemSearch>,
     _ratelimit: RateLimit<ChecklistRatelimit>,
     AuthUser { user_id }: AuthUser,
 ) -> Result<Response, ApiError> {
@@ -74,7 +76,7 @@ pub async fn get_route_checklist_items(
     let items = state
         .db
         .checklist_items
-        .get_by_checklist(id)
+        .search(id, &query)
         .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
 

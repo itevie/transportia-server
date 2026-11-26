@@ -20,6 +20,7 @@ pub fn routes() -> Router<HttpState> {
         .route("/photos/{id}", axum::routing::patch(manage::update_photo))
         .route("/photos/{id}", axum::routing::delete(manage::delete_photo))
         .route("/photos/{id}", axum::routing::get(query::get_photo))
+        .route("/photos/{id}/photo-type/{new_type}", axum::routing::patch(manage::update_photo_type))
         .route(
             "/photos/{id}/image",
             axum::routing::get(image::get_photo_image),

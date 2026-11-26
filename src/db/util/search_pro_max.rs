@@ -19,11 +19,16 @@ pub struct SearchQuery<'a> {
     pub distinct: Option<(&'a str, &'a [(&'a str, &'a str)])>,
 
     pub ilike: Vec<(&'a str, Option<&'a str>)>,
+    pub ilike_or: Vec<(&'a str, Vec<&'a str>)>,
 
     pub eq: Vec<(&'a str, EqBinder)>,
+    pub eq_or: Vec<Vec<(&'a str, EqBinder)>>,
+    pub null_check: Vec<(&'a str, bool)>,
 
     pub exists: Vec<(Option<bool>, &'a str)>,
     pub exists_b: Vec<ExistsB<'a>>,
+
+    pub where_true: bool,
 
     pub search: Option<&'a str>,
     pub search_columns: Vec<&'a str>,
@@ -57,18 +62,22 @@ impl<'a> SearchQuery<'a> {
             from,
             distinct: None,
             ilike: Vec::new(),
+            ilike_or: vec![],
             eq: Vec::new(),
             exists: Vec::new(),
             exists_b: vec![],
+            where_true: false,
             search: None,
             search_columns: Vec::new(),
             normalized_search: None,
             normalized_columns: Vec::new(),
             normalized_exists: Vec::new(),
+            null_check: Vec::new(),
             // normalized_exists_b: vec![],
             order: "",
             limit: 50,
             offset: None,
+            eq_or: vec![],
         }
     }
 
@@ -87,6 +96,21 @@ impl<'a> SearchQuery<'a> {
         value: Option<&'a str>,
     ) -> Self {
         self.ilike.push((column, value));
+        self
+    }
+
+    pub fn ilike_or(
+        mut self,
+        value: Option<&'a str>,
+        columns: impl IntoIterator<Item = &'a str>,
+    ) -> Self {
+        if let Some(value) = value {
+            self.ilike_or.push((
+                value,
+                columns.into_iter().collect(),
+            ));
+        }
+
         self
     }
 
@@ -115,6 +139,45 @@ impl<'a> SearchQuery<'a> {
             ));
         }
 
+        self
+    }
+
+    pub fn eq_or<T>(
+        mut self,
+        value: Option<T>,
+        columns: &'a [&'a str],
+    ) -> Self
+    where
+        T: for<'q> Encode<'q, Postgres>
+        + Type<Postgres>
+        + Clone
+        + Send
+        + Sync
+        + 'static,
+    {
+        if let Some(value) = value {
+            self.eq_or.push(
+                columns
+                    .iter()
+                    .map(|column| {
+                        let value = value.clone();
+
+                        (
+                            *column,
+                            Box::new(move |builder: &mut QueryBuilder<Postgres>| {
+                                builder.push_bind(value.clone());
+                            }) as EqBinder,
+                        )
+                    })
+                    .collect(),
+            );
+        }
+
+        self
+    }
+
+    pub fn where_true(mut self, v: bool) -> Self {
+        self.where_true = v;
         self
     }
 
@@ -151,6 +214,15 @@ impl<'a> SearchQuery<'a> {
     ) -> Self {
         self.search = value;
         self.search_columns = columns.into_iter().collect();
+        self
+    }
+
+    pub fn null_check(mut self, add: bool, column: &'a str, value: bool) -> Self {
+        if add == false {
+            return self;
+        }
+
+        self.null_check.push((column, value));
         self
     }
 
@@ -244,6 +316,12 @@ pub fn search_query(
         .push(query.select)
         .push(query.from);
 
+    // if query.where_true {
+    //     builder.push(" WHERE TRUE ");
+    // } else {
+    //     builder.push(" WHERE ");
+    // }
+
     // ILIKE filters.
     for (column, value) in &query.ilike {
         if let Some(value) = value {
@@ -255,6 +333,40 @@ pub fn search_query(
         }
     }
 
+    // ILIKE OR filters.
+    for (value, columns) in &query.ilike_or {
+        if columns.is_empty() {
+            continue;
+        }
+
+        builder.push(" AND (");
+
+        for (index, column) in columns.iter().enumerate() {
+            if index > 0 {
+                builder.push(" OR ");
+            }
+
+            builder
+                .push(*column)
+                .push(" ILIKE ")
+                .push_bind(format!("%{value}%"));
+        }
+
+        builder.push(")");
+    }
+
+    // NOT NULL filters.
+    for (column, value) in &query.null_check {
+        builder
+            .push(" AND ")
+            .push(*column)
+            .push(if *value {
+                " IS NOT NULL"
+            } else {
+                " IS NULL"
+            });
+    }
+
     // Equality filters.
     for (column, bind) in &query.eq {
         builder
@@ -263,6 +375,29 @@ pub fn search_query(
             .push(" = ");
 
         bind(builder);
+    }
+
+    // Equality OR filters.
+    for group in &query.eq_or {
+        if group.is_empty() {
+            continue;
+        }
+
+        builder.push(" AND (");
+
+        for (index, (column, bind)) in group.iter().enumerate() {
+            if index > 0 {
+                builder.push(" OR ");
+            }
+
+            builder
+                .push(*column)
+                .push(" = ");
+
+            bind(builder);
+        }
+
+        builder.push(")");
     }
 
     // EXISTS filters.

@@ -5,7 +5,7 @@ use axum::response::{IntoResponse, Response};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
-use crate::auth::quick::{is_admin, is_trusted_user};
+use crate::auth::quick::{check_user, is_admin, is_trusted_user};
 use crate::db::resource::model_bus::model_bus_ownership::{
     ModelBusOwnershipQuery, ModelBusOwnerships,
 };
@@ -17,6 +17,7 @@ use crate::extractors::optional_authenticator::OptionalAuthUser;
 use crate::extractors::ratelimit::{CreateRatelimit, QueryRatelimit, RateLimit, SearchRatelimit};
 use crate::http::HttpState;
 use crate::http::errors::ApiError;
+use crate::validation::checklists::check_checklist_obj;
 
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
 pub struct ModelBusOwnershipCreateRequest {
@@ -40,7 +41,7 @@ pub struct ModelBusOwnershipCreateResponse {
 
 #[utoipa::path(
     get,
-    path = "/model-bus-ownerships",
+    path = "/users/{id}/model-bus-ownerships",
     tag = "Model Bus Ownerships",
     summary = "Search model bus ownerships",
     params(ModelBusOwnershipQuery),
@@ -59,11 +60,18 @@ pub struct ModelBusOwnershipCreateResponse {
 pub async fn search_model_bus_ownerships(
     State(state): State<HttpState>,
     Query(query): Query<ModelBusOwnershipQuery>,
+    Path(id): Path<i64>,
     _ratelimit: RateLimit<SearchRatelimit>,
     AuthUser { user_id }: AuthUser,
 ) -> Result<Json<Vec<ModelBusOwnershipFilledOut>>, ApiError> {
+    let user= check_user(state.db.clone(), id).await?;
+    
+    if user.id != user_id && !user.public_models {
+        return Err(ApiError::Unauthorized(format!("User {} does not have public models enabled", id)));
+    }
+    
     let mut query = query;
-    query.user_id = Some(user_id);
+    query.user_id = Some(user.id);
 
     let ownerships = state
         .db
@@ -75,6 +83,8 @@ pub async fn search_model_bus_ownerships(
     let filled = ModelBusOwnerships::fill_out(state.db.clone(), ownerships, Some(user_id))
         .await
         .map_err(|err| ApiError::Database(err.to_string()))?;
+    
+    println!("2");
 
     Ok(Json(filled))
 }
@@ -108,10 +118,16 @@ pub async fn search_model_bus_ownerships(
 )]
 pub async fn get_model_bus_ownership(
     State(state): State<HttpState>,
-    Path(id): Path<i64>,
+    Path((uid, id)): Path<(i64, i64)>,
     _ratelimit: RateLimit<QueryRatelimit>,
     AuthUser { user_id }: AuthUser,
 ) -> Result<Json<ModelBusOwnershipFilledOut>, ApiError> {
+    let user= check_user(state.db.clone(), uid).await?;
+
+    if user.id != user_id && !user.public_models {
+        return Err(ApiError::Unauthorized(format!("User {} does not have public models enabled", id)));
+    }
+    
     let ownership = state
         .db
         .model_bus_ownerships
@@ -130,7 +146,7 @@ pub async fn get_model_bus_ownership(
 
 #[utoipa::path(
     post,
-    path = "/model-bus-ownerships",
+    path = "/users/{id}/model-bus-ownerships",
     tag = "Model Bus Ownerships",
     summary = "Create a model bus ownership",
     request_body = ModelBusOwnershipCreateRequest,
@@ -160,6 +176,7 @@ pub async fn get_model_bus_ownership(
 pub async fn create_model_bus_ownership(
     State(state): State<HttpState>,
     AuthUser { user_id }: AuthUser,
+    Path(_user): Path<i64>,
     _ratelimit: RateLimit<CreateRatelimit>,
     Json(body): Json<ModelBusOwnershipCreateRequest>,
 ) -> Result<Response, ApiError> {
@@ -191,7 +208,7 @@ pub async fn create_model_bus_ownership(
 
 #[utoipa::path(
     patch,
-    path = "/model-bus-ownerships/{id}",
+    path = "/users/{id}/model-bus-ownerships/{id}",
     tag = "Model Bus Ownerships",
     summary = "Update a model bus ownership",
     params(
@@ -226,7 +243,7 @@ pub async fn create_model_bus_ownership(
 )]
 pub async fn update_model_bus_ownership(
     State(state): State<HttpState>,
-    Path(id): Path<i64>,
+    Path((_user, id)): Path<(i64, i64)>,
     AuthUser { user_id }: AuthUser,
     Json(body): Json<ModelBusOwnershipUpdateRequest>,
 ) -> Result<Response, ApiError> {
@@ -265,7 +282,7 @@ pub async fn update_model_bus_ownership(
 
 #[utoipa::path(
     delete,
-    path = "/model-bus-ownerships/{id}",
+    path = "/users/{id}/model-bus-ownerships/{id}",
     tag = "Model Bus Ownerships",
     summary = "Delete a model bus ownership",
     params(
@@ -299,18 +316,20 @@ pub async fn update_model_bus_ownership(
 )]
 pub async fn delete_model_bus_ownership(
     State(state): State<HttpState>,
-    Path(id): Path<i64>,
+    Path((_user, id)): Path<(i64, i64)>,
     AuthUser { user_id }: AuthUser,
 ) -> Result<Response, ApiError> {
-    is_admin(state.db.clone(), user_id).await?;
-
-    state
+    let o = state
         .db
         .model_bus_ownerships
         .get(id)
         .await
         .map_err(|err| ApiError::Database(err.to_string()))?
         .ok_or_else(|| ApiError::NotFound("Model bus ownership not found".to_string()))?;
+
+    if o.user_id != user_id {
+        return Err(ApiError::Unauthorized("You do not own this model ownership".to_string()));
+    }
 
     state
         .db

@@ -12,6 +12,7 @@ use axum::{Json, extract::Multipart};
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
 use crate::extractors::ratelimit::{RateLimit, UpdateRatelimit, UploadRatelimit};
+use crate::util::exif::extract_exif;
 
 #[derive(Debug, Deserialize, ToSchema, IntoParams)]
 pub struct UploadDetails {
@@ -77,6 +78,8 @@ pub async fn upload_image(
             .await
             .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 
+        let exif = extract_exif(&data, true);
+
         let data =
             compress_image(&data).map_err(|err| ApiError::GenericServerError(err.to_string()))?;
 
@@ -111,11 +114,11 @@ pub async fn upload_image(
                 uploaded_id: key,
                 title: "".to_string(),
                 description: None,
+                exif: exif.map(sqlx::types::Json),
                 created_at: chrono::Utc::now().to_rfc3339(),
             })
             .await
             .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
-
         photos.push(photo);
     }
 

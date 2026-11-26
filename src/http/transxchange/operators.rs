@@ -75,7 +75,6 @@ pub async fn get_operator(
     Path(id): Path<String>,
     _ratelimit: RateLimit<QueryRatelimit>,
 ) -> Result<Json<TxOperator>, String> {
-    println!("{}", id);
     let operator = state
         .db
         .tx_operators

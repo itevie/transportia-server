@@ -135,6 +135,8 @@ pub async fn init_db() -> Result<Database, Box<dyn std::error::Error>> {
     execute_sql!(SQL_MODEL_BUS_OWNERSHIPS);
     execute_sql!(SQL_MODEL_BUS_PHOTO_DETAILS);
 
+    // let special_routes = [("RR", "Rail Replacement"), ("TR", "Tram Replacement")];
+
     let db = Database {
         pool: pool.clone(),
         bus_listings: BusListings::new(pool.clone()),

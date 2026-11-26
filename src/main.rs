@@ -16,6 +16,7 @@ use axum::http::{header, Method};
 use std::sync::Arc;
 use tower_http::compression::CompressionLayer;
 use tower_http::cors::{Any, CorsLayer};
+use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
 use utoipa::OpenApi;
 use crate::extractors::ratelimit::RateLimitState;
@@ -87,6 +88,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .merge(
             utoipa_swagger_ui::SwaggerUi::new("/swagger-ui")
                 .url("/api-doc/openapi.json", ApiDoc::openapi()),
+        )
+        .fallback_service(
+            ServeDir::new("client/web")
+                .not_found_service(ServeFile::new("client/web/index.html")),
         )
         .layer(cors)
         .layer(DefaultBodyLimit::max(25 * 1024 * 1024))

@@ -1,16 +1,19 @@
-use std::path::PathBuf;
+use std::io::Cursor;
+use std::path::{Path, PathBuf};
 
-use crate::http::HttpState;
-use crate::http::errors::ApiError;
-use axum::extract::{Path, Query, State};
-use axum::http::{StatusCode, header};
+use axum::extract::{Path as PathExtractor, Query, State};
+use axum::http::{header, StatusCode};
 use axum::response::Response;
-use exif::{In, Tag};
 use image::imageops::FilterType;
 use image::metadata::Orientation;
+use image::{DynamicImage, ImageFormat};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
-use crate::extractors::ratelimit::{MediaRatelimit, RateLimit, UpdateRatelimit};
+
+use crate::extractors::ratelimit::{MediaRatelimit, RateLimit};
+use crate::http::errors::ApiError;
+use crate::http::HttpState;
+use crate::util::exif::get_photo_orientation;
 
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
 pub struct PhotoImageQuery {
@@ -18,13 +21,88 @@ pub struct PhotoImageQuery {
     pub height: Option<u32>,
 }
 
-fn image_response(bytes: Vec<u8>) -> Response {
+const CACHE_DIR: &str = "data/photo_cache";
+const CDN_URL: &str = "https://transportia-cdn.dawn.rest";
+
+fn image_response(bytes: Vec<u8>, content_type: &'static str) -> Response {
     Response::builder()
         .status(StatusCode::OK)
-        .header(header::CONTENT_TYPE, "image/jpeg")
-        .header(header::CACHE_CONTROL, "public, max-age=31536000, immutable")
+        .header(header::CONTENT_TYPE, content_type)
+        .header(
+            header::CACHE_CONTROL,
+            "public, max-age=31536000, immutable",
+        )
         .body(bytes.into())
         .unwrap()
+}
+
+async fn fetch_original_image(uploaded_id: &str) -> Result<Vec<u8>, ApiError> {
+    let url = format!("{CDN_URL}/{uploaded_id}");
+
+    let response = reqwest::get(&url)
+        .await
+        .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
+
+    if !response.status().is_success() {
+        return Err(ApiError::GenericServerError(format!(
+            "Failed to fetch image: HTTP {}",
+            response.status()
+        )));
+    }
+
+    response
+        .bytes()
+        .await
+        .map(|bytes| bytes.to_vec())
+        .map_err(|err| ApiError::GenericServerError(err.to_string()))
+}
+
+fn decode_image(bytes: &[u8]) -> Result<DynamicImage, ApiError> {
+    image::load_from_memory(bytes)
+        .map_err(|err| ApiError::GenericServerError(err.to_string()))
+}
+
+fn encode_image(image: DynamicImage, format: ImageFormat) -> Result<Vec<u8>, ApiError> {
+    let mut output = Cursor::new(Vec::new());
+
+    image
+        .write_to(&mut output, format)
+        .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
+
+    Ok(output.into_inner())
+}
+
+async fn read_cache(path: &Path) -> Result<Option<Vec<u8>>, ApiError> {
+    match tokio::fs::read(path).await {
+        Ok(bytes) => Ok(Some(bytes)),
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(err) => Err(ApiError::GenericServerError(err.to_string())),
+    }
+}
+
+async fn write_cache(path: &Path, bytes: &[u8]) -> Result<(), ApiError> {
+    tokio::fs::create_dir_all(path.parent().unwrap())
+        .await
+        .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
+
+    tokio::fs::write(path, bytes)
+        .await
+        .map_err(|err| ApiError::GenericServerError(err.to_string()))
+}
+
+fn resized_cache_path(id: i64, width: Option<u32>, height: Option<u32>) -> PathBuf {
+    let name = match (width, height) {
+        (Some(w), Some(h)) => format!("{id}_{w}x{h}.jpg"),
+        (Some(w), None) => format!("{id}_w{w}.jpg"),
+        (None, Some(h)) => format!("{id}_h{h}.jpg"),
+        (None, None) => unreachable!(),
+    };
+
+    PathBuf::from(CACHE_DIR).join(name)
+}
+
+fn original_cache_path(id: i64, orientation: Orientation) -> PathBuf {
+    PathBuf::from(CACHE_DIR).join(format!("{id}_original_{orientation:?}.webp"))
 }
 
 #[utoipa::path(
@@ -41,7 +119,7 @@ fn image_response(bytes: Vec<u8>) -> Response {
         (
             "width" = Option<u32>,
             Query,
-            description = "Maximum image width. Defaults to 800."
+            description = "Maximum image width."
         ),
         (
             "height" = Option<u32>,
@@ -52,7 +130,7 @@ fn image_response(bytes: Vec<u8>) -> Response {
     responses(
         (
             status = 200,
-            description = "Resized photo image",
+            description = "Photo image",
             content_type = "image/jpeg"
         ),
         (
@@ -73,7 +151,7 @@ pub async fn get_photo_image(
     State(state): State<HttpState>,
     Query(query): Query<PhotoImageQuery>,
     _ratelimit: RateLimit<MediaRatelimit>,
-    Path(id): Path<i64>,
+    PathExtractor(id): PathExtractor<i64>,
 ) -> Result<Response, ApiError> {
     let width = query.width;
     let height = query.height;
@@ -92,116 +170,59 @@ pub async fn get_photo_image(
         .map_err(|err| ApiError::GenericServerError(err.to_string()))?
         .ok_or_else(|| ApiError::NotFound("Photo not found".to_string()))?;
 
-    // Requests without dimensions return the original image.
+    let orientation = get_photo_orientation(photo.exif.as_ref());
+
+    // No dimensions: return the original WebP.
     if width.is_none() && height.is_none() {
-        let url = format!("https://transportia-cdn.dawn.rest/{}", photo.uploaded_id);
+        // Only transformed originals need a separate cached copy.
+        if orientation != Orientation::NoTransforms {
+            let cache_path = original_cache_path(id, orientation);
 
-        let response = reqwest::get(&url)
-            .await
-            .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
+            if let Some(bytes) = read_cache(&cache_path).await? {
+                return Ok(image_response(bytes, "image/webp"));
+            }
 
-        if !response.status().is_success() {
-            return Err(ApiError::GenericServerError(format!(
-                "Failed to fetch image: HTTP {}",
-                response.status()
-            )));
+            let bytes = fetch_original_image(&photo.uploaded_id).await?;
+
+            let mut image = decode_image(&bytes)?;
+            image.apply_orientation(orientation);
+
+            let output = encode_image(image, ImageFormat::WebP)?;
+
+            write_cache(&cache_path, &output).await?;
+
+            return Ok(image_response(output, "image/webp"));
         }
 
-        let bytes = response
-            .bytes()
-            .await
-            .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
+        // No transformation needed; return the original bytes untouched.
+        let bytes = fetch_original_image(&photo.uploaded_id).await?;
 
-        return Ok(image_response(bytes.to_vec()));
+        return Ok(image_response(bytes, "image/webp"));
     }
 
-    // Build the cache path and check it before accessing the CDN.
-    let cache_name = match (width, height) {
-        (Some(w), Some(h)) => format!("{id}_{w}x{h}.jpg"),
-        (Some(w), None) => format!("{id}_w{w}.jpg"),
-        (None, Some(h)) => format!("{id}_h{h}.jpg"),
-        (None, None) => unreachable!(),
-    };
+    // Resized images are cached as JPEG.
+    let cache_path = resized_cache_path(id, width, height);
 
-    let cache_path = PathBuf::from("data/photo_cache").join(cache_name);
-
-    match tokio::fs::read(&cache_path).await {
-        Ok(bytes) => return Ok(image_response(bytes)),
-        Err(err) if err.kind() == std::io::ErrorKind::NotFound => {}
-        Err(err) => {
-            return Err(ApiError::GenericServerError(err.to_string()));
-        }
+    if let Some(bytes) = read_cache(&cache_path).await? {
+        return Ok(image_response(bytes, "image/jpeg"));
     }
 
-    // Cache miss: fetch the original image.
-    let url = format!("https://transportia-cdn.dawn.rest/{}", photo.uploaded_id);
+    // Fetch, decode and orient the original image.
+    let bytes = fetch_original_image(&photo.uploaded_id).await?;
 
-    let response = reqwest::get(&url)
-        .await
-        .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
-
-    if !response.status().is_success() {
-        return Err(ApiError::GenericServerError(format!(
-            "Failed to fetch image: HTTP {}",
-            response.status()
-        )));
-    }
-
-    let bytes = response
-        .bytes()
-        .await
-        .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
-
-    let mut image = image::ImageReader::new(std::io::Cursor::new(&bytes))
-        .with_guessed_format()
-        .map_err(|err| ApiError::GenericServerError(err.to_string()))?
-        .decode()
-        .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
-
-    // Preserve EXIF orientation.
-    let orientation = {
-        let mut cursor = std::io::Cursor::new(&bytes);
-
-        let exif = exif::Reader::new().read_from_container(&mut cursor).ok();
-
-        match exif
-            .as_ref()
-            .and_then(|exif| exif.get_field(Tag::Orientation, In::PRIMARY))
-            .and_then(|field| field.value.get_uint(0))
-        {
-            Some(1) => Orientation::NoTransforms,
-            Some(2) => Orientation::FlipHorizontal,
-            Some(3) => Orientation::Rotate180,
-            Some(4) => Orientation::FlipVertical,
-            Some(6) => Orientation::Rotate90,
-            Some(8) => Orientation::Rotate270,
-            _ => Orientation::NoTransforms,
-        }
-    };
-
+    let mut image = decode_image(&bytes)?;
     image.apply_orientation(orientation);
 
-    let width = width.unwrap_or(u32::MAX);
-    let height = height.unwrap_or(u32::MAX);
+    // Resize while preserving the aspect ratio.
+    let resized = image.resize(
+        width.unwrap_or(u32::MAX),
+        height.unwrap_or(u32::MAX),
+        FilterType::Lanczos3,
+    );
 
-    let resized = image.resize(width, height, FilterType::Lanczos3);
+    let output = encode_image(resized, ImageFormat::Jpeg)?;
 
-    let mut output = Vec::new();
+    write_cache(&cache_path, &output).await?;
 
-    resized
-        .write_to(
-            &mut std::io::Cursor::new(&mut output),
-            image::ImageFormat::Jpeg,
-        )
-        .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
-
-    tokio::fs::create_dir_all(cache_path.parent().unwrap())
-        .await
-        .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
-
-    tokio::fs::write(&cache_path, &output)
-        .await
-        .map_err(|err| ApiError::GenericServerError(err.to_string()))?;
-
-    Ok(image_response(output))
+    Ok(image_response(output, "image/jpeg"))
 }

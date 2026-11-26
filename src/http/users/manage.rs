@@ -55,6 +55,14 @@ pub async fn update_user(
     if let Some(bio) = update.bio {
         user.bio = check_field_valid_option(bio, FieldValidationType::Bio)?;
     }
+    
+    if let Some(public_f) = update.public_favourites {
+        user.public_favourites = public_f;
+    }
+    
+    if let Some(public_m) = update.public_models {
+        user.public_models = public_m;
+    }
 
     state
         .db

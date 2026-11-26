@@ -15,6 +15,7 @@ bitflags! {
         const CAN_CREATE_OBJ = 1 << 2;
         const CAN_DELETE_OBJ = 1 << 3;
         const CAN_EDIT_USER_PHOTO_DETAILS = 1 << 4;
+        const CAN_BULK_CREATE = 1 << 5;
     }
 }
 
@@ -31,6 +32,7 @@ pub struct User {
     pub password_hash: String,
     
     pub public_favourites: bool,
+    pub public_models: bool,
 
     pub trusted_user: bool,
     pub admin: bool,
@@ -40,6 +42,7 @@ pub struct User {
 pub struct UserUpdate {
     pub username: Option<String>,
     pub public_favourites: Option<bool>,
+    pub public_models: Option<bool>,
     
     // Nullable
     #[serde(default, deserialize_with = "double_option")]

@@ -4,6 +4,7 @@ use crate::db::resource::favourite::favourite_group_def::FavouritesGroup;
 use crate::db::resource::photo::photo_def::Photo;
 use crate::http::errors::ApiError;
 use std::sync::Arc;
+use crate::db::resource::user::def::User;
 
 pub async fn check_route_checklist(
     db: Arc<Database>,
@@ -66,6 +67,20 @@ pub async fn check_photo(
     }
 
     Ok(photo)
+}
+
+pub async fn check_user(
+    db: Arc<Database>,
+    user_id: i64,
+) -> Result<User, ApiError> {
+    let user = db
+        .users
+        .get(user_id, false)
+        .await
+        .map_err(|e| ApiError::Database(e.to_string()))?
+        .ok_or_else(|| ApiError::NotFound(user_id.to_string()))?;
+
+    Ok(user)
 }
 
 pub async fn is_trusted_user(db: Arc<Database>, user_id: i64) -> Result<bool, ApiError> {

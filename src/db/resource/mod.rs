@@ -10,3 +10,4 @@ pub mod star_rating;
 pub mod tram;
 pub mod transxchange;
 pub mod user;
+mod activity_feed;

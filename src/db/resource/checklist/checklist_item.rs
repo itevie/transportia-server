@@ -1,13 +1,15 @@
 use std::sync::Arc;
-
-use sqlx::PgPool;
-
+use serde::Deserialize;
+use sqlx::{PgPool, Postgres, QueryBuilder};
+use utoipa::{IntoParams, ToSchema};
 use crate::db::Database;
 use crate::db::resource::bustimes::vehicle::BtVehicles;
+use crate::db::resource::bustimes::vehicle_def::BtVehicle;
 use crate::db::resource::checklist::checklist_def::{Checklist, ChecklistType};
 use crate::db::resource::checklist::checklist_item_def::{
     ChecklistItem, ChecklistItemFilledOut, ChecklistObj,
 };
+use crate::db::util::search_pro_max::{search_query, SearchQuery};
 
 pub static SQL_CHECKLIST_ITEMS: &str = r#"
 CREATE TABLE IF NOT EXISTS checklist_items (
@@ -24,6 +26,15 @@ CREATE TABLE IF NOT EXISTS checklist_items (
 #[derive(Clone)]
 pub struct ChecklistItems {
     pool: PgPool,
+}
+
+#[derive(Deserialize, ToSchema, IntoParams)]
+pub struct ChecklistItemSearch {
+    pub search: Option<String>,
+    pub completed: Option<bool>,
+
+    pub page_length: Option<i64>,
+    pub offset: Option<i64>,
 }
 
 impl ChecklistItems {
@@ -59,6 +70,53 @@ impl ChecklistItems {
         .bind(checklist_id)
         .fetch_all(&self.pool)
         .await
+    }
+
+    pub async fn search(&self, checklist_id: i64, query: &ChecklistItemSearch) -> Result<Vec<ChecklistItem>, sqlx::Error> {
+        let page_length = query.page_length.unwrap_or(50).clamp(1, 1000);
+
+        let search = SearchQuery::new(
+            "ci.*",
+            r#"
+                FROM checklist_items ci
+                INNER JOIN checklists c
+                    ON c.id = ci.checklist_id
+                LEFT JOIN tx_lines l
+                    ON c.checklist_type = 0
+                    AND l.tx_id = ci.obj_id
+                LEFT JOIN bt_vehicles v
+                    ON c.checklist_type = 1
+                    AND v.id::TEXT = ci.obj_id
+                WHERE TRUE
+            "#,
+        );
+
+        let search = search
+            .search(
+                query.search.as_deref(),
+                [
+                    "v.reg",
+                    "v.fleet",
+                    "l.inbound_description",
+                    "l.outbound_description",
+                    "l.name",
+                    "l.operator_code"
+                ],
+            )
+            .eq("ci.checklist_id", Some(checklist_id))
+            .null_check(query.completed.is_some(), "ci.completed_at", query.completed.unwrap_or(false))
+            .order("ci.id DESC")
+            .limit(page_length)
+            .offset(query.offset);
+
+        let mut builder = QueryBuilder::<Postgres>::new("");
+
+        search_query(&mut builder, &search)?;
+
+        builder
+            .build_query_as::<ChecklistItem>()
+            .fetch_all(&self.pool)
+            .await
     }
 
     pub async fn get_by_obj(

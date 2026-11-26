@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS users (
     bio TEXT,
     password_hash TEXT NOT NULL,
     public_favourites BOOLEAN NOT NULL DEFAULT FALSE,
+    public_models BOOLEAN NOT NULL DEFAULT FALSE,
     trusted_user BOOLEAN NOT NULL DEFAULT FALSE,
     admin BOOLEAN NOT NULL DEFAULT FALSE
 )
@@ -47,6 +48,7 @@ impl Users {
                 bio,
                 trusted_user,
                 public_favourites,
+                public_models,
                 admin,
                 ''::TEXT AS password_hash
             FROM users
@@ -70,6 +72,7 @@ impl Users {
                 bio,
                 trusted_user,
                 public_favourites,
+                public_models,
                 admin,
                 ''::TEXT AS password_hash
             FROM users
@@ -96,6 +99,7 @@ impl Users {
                 bio,
                 trusted_user,
                 public_favourites,
+                public_models,
                 admin,
                 CASE WHEN $2 THEN password_hash ELSE ''::TEXT END AS password_hash
             FROM users
@@ -121,6 +125,7 @@ impl Users {
                 bio,
                 trusted_user,
                 public_favourites,
+                public_models,
                 admin,
                 ''::TEXT AS password_hash
             FROM users
@@ -181,8 +186,9 @@ impl Users {
                     bio = $3,
                     trusted_user = $4,
                     admin = $5,
-                    public_favourites = $6
-                WHERE id = $7
+                    public_favourites = $6,
+                    public_models = $7
+                WHERE id = $8
                 "#,
             )
             .bind(&user.username)
@@ -191,6 +197,7 @@ impl Users {
             .bind(user.trusted_user)
             .bind(user.admin)
             .bind(user.public_favourites)
+            .bind(user.public_models)
             .bind(user.id)
             .execute(&self.pool)
             .await?;

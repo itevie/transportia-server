@@ -6,16 +6,17 @@ use sqlx::{FromRow, PgPool, Postgres, QueryBuilder};
 use utoipa::ToSchema;
 
 use crate::db::Database;
+use crate::db::resource::bustimes::vehicle_def::BtVehicleSearchResult;
 use crate::db::resource::favourite::favourite_def::FavouriteType;
 use crate::db::resource::photo::bus_photo_details::BusPhotoDetailsManager;
 use crate::db::resource::photo::bus_photo_details_def::BusPhotoDetails;
 use crate::db::resource::photo::model_bus_photo_details::ModelBusPhotoDetailsManager;
 use crate::db::resource::photo::model_bus_photo_details_def::ModelBusPhotoDetails;
-use crate::db::resource::photo::photo_def::{
-    Photo, PhotoDetails, PhotoFilledOut, PhotoType, PhotoUpdate,
-};
+use crate::db::resource::photo::photo_def::{Photo, PhotoDetails, PhotoFilledOut, PhotoSearchResult, PhotoType, PhotoUpdate};
 use crate::db::resource::photo::tram_photo_details::TramPhotoDetailsManager;
 use crate::db::resource::photo::tram_photo_details_def::TramPhotoDetails;
+use crate::db::util::pagination::PaginatedResponse;
+use crate::db::util::search_pro_max::{search_query, SearchQuery};
 
 pub static SQL_PHOTOS: &str = r#"
 CREATE TABLE IF NOT EXISTS photos (
@@ -28,6 +29,7 @@ CREATE TABLE IF NOT EXISTS photos (
     uploaded_id TEXT NOT NULL,
     title TEXT NOT NULL,
     description TEXT,
+    exif JSONB,
     created_at TEXT NOT NULL
 );
 "#;
@@ -108,6 +110,7 @@ struct PhotoRow {
     title: String,
     description: Option<String>,
     created_at: String,
+    exif: Option<sqlx::types::Json<serde_json::Value>>,
 }
 
 impl TryFrom<PhotoRow> for Photo {
@@ -124,6 +127,7 @@ impl TryFrom<PhotoRow> for Photo {
             uploaded_id: row.uploaded_id,
             title: row.title,
             description: row.description,
+            exif: row.exif,
             created_at: row.created_at,
         })
     }
@@ -152,6 +156,7 @@ impl Photos {
                 uploaded_id,
                 title,
                 description,
+                exif,
                 created_at
             FROM photos
             WHERE id = $1
@@ -162,6 +167,106 @@ impl Photos {
         .await?;
 
         row.map(Photo::try_from).transpose()
+    }
+
+    pub async fn search_new(&self, query: &PhotoQuery) -> sqlx::Result<PaginatedResponse<Photo>> {
+        let page_length = query.page_length.unwrap_or(50).clamp(1, 1000);
+
+        let mut search = SearchQuery::new(
+            "p.*, COUNT(*) OVER() AS total_count",
+            " FROM photos p
+            LEFT JOIN bus_photo_details bd
+                ON bd.id = p.obj_details_id
+                AND p.photo_type = 0
+            LEFT JOIN bt_vehicles v
+                ON v.id = bd.matched_vehicle_id
+            LEFT JOIN bt_vehicle_types vt
+                ON vt.id = v.vehicle_type_id
+            LEFT JOIN bt_liveries vl
+                ON vt.id = v.livery_id
+            LEFT JOIN tram_photo_details td
+                ON td.id = p.obj_details_id
+                AND p.photo_type = 3
+            LEFT JOIN trams t
+                ON t.id = td.matched_vehicle_id
+            LEFT JOIN model_bus_photo_details mbd
+                ON mbd.id = p.obj_details_id
+                AND p.photo_type = 1
+            LEFT JOIN model_buses mb
+                ON mb.id = mbd.matched_model_id
+            WHERE TRUE"
+        );
+
+        search = search
+            .eq("p.id", query.id)
+            .eq("p.author_id", query.author_id)
+            .eq("p.photo_type", query.photo_type.map(|x| photo_type_to_i64(x)))
+            .ilike("p.title", query.title.as_deref())
+            .ilike("p.description", query.description.as_deref())
+            // Bus Details
+            .ilike_or(query.bd_reg.as_deref(), ["bd.reg", "v.reg"])
+            .ilike_or(query.bd_fleet.as_deref(), ["bd.fleet", "v.fleet"])
+            .eq_or(query.bd_livery_id, &["bd.livery_id", "v.livery_id"])
+            .eq_or(query.bd_vehicle_type_id, &["bd.vehicle_type_id", "v.vehicle_type_id"])
+            .eq("bd.matched_vehicle_id", query.bd_vehicle_id)
+            .eq("bd.route_id", query.bd_route.clone())
+            .eq("v.operator_id", query.bd_operator_id.clone())
+            .null_check(query.bd_has_matched_vehicle.is_some(), "bd.matched_vehicle_id", query.bd_has_matched_vehicle.unwrap_or(false))
+            // Tram Details
+            .ilike_or(query.td_fleet.as_deref(), ["td.fleet", "t.fleet"])
+            .eq_or(query.td_livery_id, &["td.livery_id", "t.livery_id"])
+            .eq_or(query.td_vehicle_type_id, &["td.vehicle_type_id", "t.vehicle_type_id"])
+            .eq_or(query.td_operator_id, &["td.operator_id", "t.operator_id"])
+            .eq("td.matched_vehicle_id", query.td_vehicle_id)
+            .null_check(query.td_has_matched_vehicle.is_some(), "td.matched_vehicle_id", query.td_has_matched_vehicle.unwrap_or(false))
+            // Model Bus Details
+            .eq("mb.manufacturer", query.mbd_manufacturer.clone())
+            .eq("md.product_code", query.mbd_product_code.clone())
+            .eq("mb.scale", query.mbd_scale)
+            .eq("mb.id", query.mbd_model_id)
+            .search(
+                query.search.as_deref(),
+                [
+                    "p.title",
+                    "p.description",
+                    "p.file_name",
+                    "bd.reg",
+                    "bd.fleet",
+                    "v.reg",
+                    "v.fleet",
+                    "td.fleet",
+                    "t.fleet",
+                    "vt.name",
+                    "vl.name"
+                ]
+            )
+            .limit(page_length)
+            .offset(query.offset.map(|offset| offset.max(0)))
+            .order("p.created_at DESC")
+        ;
+
+        let mut builder = QueryBuilder::<Postgres>::new("");
+
+        search_query(&mut builder, &search)?;
+
+        let results = builder
+            .build_query_as::<PhotoSearchResult>()
+            .fetch_all(&self.pool)
+            .await?;
+
+        let total_count = results
+            .first()
+            .map(|result| result.total_count)
+            .unwrap_or(0);
+
+        Ok(PaginatedResponse {
+            current_page: query.offset.unwrap_or(0) / page_length + 1,
+            total_count,
+            items: results
+                .into_iter()
+                .map(|result| result.photo)
+                .collect(),
+        })
     }
 
     pub async fn search_old(&self, query: &PhotoQuery) -> sqlx::Result<Vec<Photo>> {
@@ -366,7 +471,7 @@ impl Photos {
     }
 
     pub async fn create(&self, photo: &Photo) -> sqlx::Result<Photo> {
-        let id = sqlx::query_scalar::<_, i64>(
+        let result = sqlx::query_scalar::<_, i64>(
             r#"
             INSERT INTO photos (
                 author_id,
@@ -377,9 +482,10 @@ impl Photos {
                 uploaded_id,
                 title,
                 description,
-                created_at
+                created_at,
+                exif
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             RETURNING id
             "#,
         )
@@ -392,8 +498,17 @@ impl Photos {
         .bind(&photo.title)
         .bind(&photo.description)
         .bind(&photo.created_at)
+            .bind(&photo.exif)
         .fetch_one(&self.pool)
-        .await?;
+        .await;
+
+        let id = match result {
+            Ok(id) => id,
+            Err(err) => {
+                eprintln!("Photo INSERT failed: {err:?}");
+                return Err(err);
+            }
+        };
 
         let mut created_photo = photo.clone();
         created_photo.id = id;
@@ -414,8 +529,9 @@ impl Photos {
                 uploaded_id = $6,
                 title = $7,
                 description = $8,
-                created_at = $9
-            WHERE id = $10
+                created_at = $9,
+                exif = $10
+            WHERE id = $11
             "#,
         )
         .bind(photo.author_id)
@@ -427,6 +543,7 @@ impl Photos {
         .bind(&photo.title)
         .bind(&photo.description)
         .bind(&photo.created_at)
+            .bind(&photo.exif)
         .bind(photo.id)
         .execute(&self.pool)
         .await?;
@@ -668,7 +785,6 @@ impl Photos {
             let details = match photo.photo_type {
                 PhotoType::Bus => {
                     let details = Self::get_bus_details(db.clone(), photo.clone()).await?;
-
                     let filled_out_details =
                         BusPhotoDetailsManager::fill_out(db.clone(), details).await?;
 

@@ -27,7 +27,7 @@ pub async fn run_all(db: Arc<Database>) {
         let mut parsed_results = Vec::new();
 
         match transxchange::for_each_xml(
-            Path::new("/home/isabella/Documents/projects/rust/transportia/tx/bodds.zip"),
+            Path::new("./tx/bodds.zip"),
             |name, xml| {
                 println!("Processing: {name}");
 

@@ -105,9 +105,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let listener = tokio::net::TcpListener::bind(("0.0.0.0", port)).await?;
 
-    println!("Server running on http://localhost:3000");
-
-
+    println!("Server running on http://localhost:{}", port);
+    
     axum::serve(
         listener,
         app.into_make_service_with_connect_info::<std::net::SocketAddr>(),

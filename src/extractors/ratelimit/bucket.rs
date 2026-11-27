@@ -67,7 +67,7 @@ impl RateLimitBucket {
             },
 
             Self::Upload => RateLimitConfig {
-                max_requests: 10,
+                max_requests: 60,
                 window: Duration::from_secs(3600),
             },
             Self::Media => RateLimitConfig {

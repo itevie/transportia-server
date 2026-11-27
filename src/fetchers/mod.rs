@@ -21,7 +21,7 @@ pub fn run_all_in_background(db: Arc<Database>) {
 pub async fn run_all(db: Arc<Database>) {
     let last_fetches = db.last_fetches.get().await.unwrap();
 
-    if 1 == 2 {
+    if Path::new("./tx/should_update").exists() {
         let db2 = Arc::clone(&db);
 
         let mut parsed_results = Vec::new();
@@ -75,6 +75,8 @@ pub async fn run_all(db: Arc<Database>) {
                 }
             }
         }
+
+        let _ = std::fs::remove_file("./tx/should_update");
     }
 
     match bustimes::fetch_bustimes_resources(db.clone()).await {

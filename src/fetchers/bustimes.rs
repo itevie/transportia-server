@@ -43,7 +43,7 @@ pub async fn fetch_bustimes_resources(db: Arc<Database>) -> Result<(), Box<dyn s
 
     let last_fetches = db.last_fetches.get().await?;
 
-    if has_passed(last_fetches.bt_liveries, TimeDelta::days(1))? == true {
+    if has_passed(last_fetches.bt_liveries, TimeDelta::days(3))? == true {
         let liveries =
             fetch_all_pages::<BtLivery>(&client, "https://bustimes.org/api/liveries?limit=10000")
                 .await?;
@@ -55,7 +55,7 @@ pub async fn fetch_bustimes_resources(db: Arc<Database>) -> Result<(), Box<dyn s
         db.last_fetches.set(LastFetch::BtLiveries).await?;
     }
 
-    if has_passed(last_fetches.bt_vehicle_types, TimeDelta::days(1))? == true {
+    if has_passed(last_fetches.bt_vehicle_types, TimeDelta::days(4))? == true {
         let vehicle_types = fetch_all_pages::<BtVehicleType>(
             &client,
             "https://bustimes.org/api/vehicletypes?limit=10000",

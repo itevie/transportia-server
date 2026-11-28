@@ -86,7 +86,7 @@ pub async fn run_all(db: Arc<Database>) {
         }
     }
 
-    if bustimes::has_passed(last_fetches.models_mbc, TimeDelta::days(1)).unwrap() == true {
+    if bustimes::has_passed(last_fetches.models_mbc, TimeDelta::days(3)).unwrap() == true {
         let mbc = match mbc::fetch().await {
             Ok(ok) => ok,
             Err(err) => {
@@ -107,7 +107,7 @@ pub async fn run_all(db: Arc<Database>) {
         db.last_fetches.set(LastFetch::ModelsMbc).await.unwrap();
     }
 
-    if bustimes::has_passed(last_fetches.models_ttcdiecast, TimeDelta::days(1)).unwrap() == true {
+    if bustimes::has_passed(last_fetches.models_ttcdiecast, TimeDelta::days(3)).unwrap() == true {
         println!("Scraping TTCDiecast");
         let ttcdiecast = match ttcdiecast::scrape_products(
             "https://www.ttcdiecast.com/collections/northcord-model-buses",

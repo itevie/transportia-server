@@ -12,7 +12,7 @@ use axum::{
 use chrono::Utc;
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
-use crate::extractors::ratelimit::{CommentRatelimit, RateLimit};
+use crate::extractors::ratelimit::{CommentRatelimit, RateLimit, SearchRatelimit};
 
 #[utoipa::path(
     get,
@@ -28,7 +28,7 @@ use crate::extractors::ratelimit::{CommentRatelimit, RateLimit};
 pub async fn get_comments(
     State(state): State<HttpState>,
     Path(id): Path<i64>,
-    _ratelimit: RateLimit<CommentRatelimit>,
+    _ratelimit: RateLimit<SearchRatelimit>,
     OptionalAuthUser(user): OptionalAuthUser,
 ) -> Result<Json<Vec<CommentFilledOut>>, ApiError> {
     let comments = state

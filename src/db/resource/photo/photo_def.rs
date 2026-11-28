@@ -69,6 +69,21 @@ pub struct Photo {
     pub created_at: String,
 }
 
+fn serialize_exif<S>(
+    value: &Option<sqlx::types::Json<serde_json::Value>>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    match value {
+        Some(value) => {
+            value.0.get("exif").unwrap_or(&value.0).serialize(serializer)
+        }
+        None => serializer.serialize_none(),
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct PhotoFilledOut {
     pub id: i64,
@@ -83,6 +98,8 @@ pub struct PhotoFilledOut {
     pub title: String,
     pub description: Option<String>,
     pub created_at: String,
+    #[schema(value_type = Option<serde_json::Value>)]
+    pub exif: Option<sqlx::types::Json<serde_json::Value>>,
 
     pub is_favourited: Option<bool>,
 }

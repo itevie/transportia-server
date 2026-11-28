@@ -839,6 +839,7 @@ impl Photos {
                 title: photo.title,
                 description: photo.description,
                 created_at: photo.created_at,
+                exif: photo.exif,
                 is_favourited: user_id.map(|_| favourite.is_some()),
             });
         }

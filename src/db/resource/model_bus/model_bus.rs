@@ -105,9 +105,11 @@ impl ModelBuses {
         let search = SearchQuery::new(
             "mb.*",
             r#"
-            FROM model_buses mb
-            WHERE TRUE
-        "#,
+                FROM model_buses mb
+                LEFT JOIN bt_vehicles v
+                    ON v.id = mb.vehicle_link
+                WHERE TRUE
+            "#,
         )
             // ILIKE filters
             .ilike("mb.product_code", query.product_code.as_deref())
@@ -134,14 +136,14 @@ impl ModelBuses {
             .exists(
                 query.has_image,
                 r#"
-            SELECT 1
-            FROM model_bus_photo_details mbpd
-            WHERE mbpd.model_bus_link = mb.id
-        "#,
+                    SELECT 1
+                    FROM model_bus_photo_details mbpd
+                    WHERE mbpd.model_bus_link = mb.id
+                "#,
             )
 
             // Normalized search across model bus fields
-            .normalized_search(
+            .search(
                 query.search.as_deref(),
                 [
                     "mb.product_code",
@@ -153,33 +155,35 @@ impl ModelBuses {
                     "mb.route_number",
                     "mb.destination",
                     "mb.vehicle_type",
+                    "v.reg",
+                    "v.fleet"
                 ],
             )
 
             // Search linked vehicles
-            .normalized_exists(
-                "FROM bt_vehicles bv",
-                "bv.id = mb.vehicle_link",
-                [
-                    "bv.reg",
-                    "bv.fleet",
-                    "bv.previous_reg",
-                    "bv.name",
-                    "bv.branding",
-                    "bv.operator_id",
-                ],
-            )
-
-            // Search linked vehicle types
-            .normalized_exists(
-                "FROM bt_vehicle_types bvt",
-                "bvt.id = mb.vehicle_type_link",
-                [
-                    "bvt.name",
-                    "bvt.style",
-                    "bvt.fuel",
-                ],
-            )
+            // .normalized_exists(
+            //     "FROM bt_vehicles bv",
+            //     "bv.id = mb.vehicle_link",
+            //     [
+            //         "bv.reg",
+            //         "bv.fleet",
+            //         "bv.previous_reg",
+            //         "bv.name",
+            //         "bv.branding",
+            //         "bv.operator_id",
+            //     ],
+            // )
+            //
+            // // Search linked vehicle types
+            // .normalized_exists(
+            //     "FROM bt_vehicle_types bvt",
+            //     "bvt.id = mb.vehicle_type_link",
+            //     [
+            //         "bvt.name",
+            //         "bvt.style",
+            //         "bvt.fuel",
+            //     ],
+            // )
 
             .order("mb.manufacturer ASC, mb.product_code ASC")
             .limit(page_length)
@@ -188,6 +192,8 @@ impl ModelBuses {
         let mut builder = QueryBuilder::<Postgres>::new("");
 
         search_query(&mut builder, &search)?;
+
+        println!("{:#?}", builder.sql());
 
         builder
             .build_query_as::<ModelBus>()
